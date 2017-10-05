@@ -28,7 +28,7 @@ print('load', time() - start)
 start = time()
 label_set = np.unique(labels)
 refs = np.empty(np.max(label_set)+1, dtype=int)
-refs[label_set] = np.arange(len(label_set))
+refs[label_set] = np.mod(np.arange(len(label_set)), colors.shape[0])
 print('colors', time() - start)
 
 mask = labels != 0
