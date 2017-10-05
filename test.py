@@ -19,12 +19,12 @@ alpha = 0.1
 start = time()
 image = np.swapaxes(nib.load(image_path).get_data(), 0, 1)
 labels = np.swapaxes(nib.load(labels_path).get_data(), 0, 1)
-labels = np.digitize(labels, np.unique(labels), right=True)
-print(labels.dtype)
-
 colors = np.load(colors_path)
-
 print('load', time() - start)
+
+start = time()
+labels = np.digitize(labels, np.unique(labels), right=True)
+print('digitize', time() - start)
 
 mask = labels != 0
 inverse_mask = np.logical_not(mask)
