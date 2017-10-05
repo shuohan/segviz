@@ -8,7 +8,6 @@ import copy
 import scipy.misc as smp
 from time import time
 import sys
-from scipy.sparse import csr_matrix
 
 image_path = 'image.nii'
 labels_path = 'labels.nii'
@@ -19,7 +18,7 @@ alpha = 0.3
 
 start = time()
 image = np.swapaxes(nib.load(image_path).get_data(), 0, 1)
-labels = np.swapaxes(nib.load(labels_path).get_data(), 0, 1)
+labels = np.swapaxes(nib.load(labels_path).get_data(), 0, 1).astype(np.int32)
 colors = np.load(colors_path)
 alphas = alpha * np.ones((colors.shape[0], 1))
 alphas[0] = 0
@@ -28,14 +27,9 @@ print('load', time() - start)
 
 start = time()
 label_set = np.unique(labels)
-new_colors = np.zeros((np.max(label_set) + 1, colors.shape[1]))
-new_colors[label_set, :] = colors[:len(label_set), :]
-colors = new_colors
+refs = np.empty(np.max(label_set)+1, dtype=int)
+refs[label_set] = np.arange(len(label_set))
 print('colors', time() - start)
-
-# start = time()
-# labels = np.digitize(labels, np.unique(labels), right=True)
-# print('digitize', time() - start)
 
 mask = labels != 0
 inverse_mask = np.logical_not(mask)
@@ -44,7 +38,7 @@ start = time()
 image_slice = image[:, :, sliceid]
 stacked_image = np.repeat(image_slice[:, :, None], 3, 2)
 labels_slice = labels[:, :, sliceid]
-stacked_labels = colors[labels_slice, :]
+stacked_labels = colors[refs[labels_slice], :]
 print('numpy', time() - start)
 
 start = time()
