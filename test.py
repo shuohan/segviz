@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 import nibabel as nib
 import scipy.misc as smp
-from PIL import Image, ImageChops
+from PIL import Image
 
 parser = argparse.ArgumentParser(description='show labels on top of image')
 parser.add_argument('image')
@@ -20,7 +20,7 @@ parser.add_argument('-c', '--colors', default=None, required=False,
                          'be set to 0 during visualization')
 parser.add_argument('-a', '--alpha', help='transparency of the label image',
                     default=0.5, required=False)
-parser.add_argument('-i', '--sliceid', help='slice no.', default=None,
+parser.add_argument('-n', '--sliceid', help='slice no.', default=None,
                     type=int, required=False)
 parser.add_argument('-r', '--use-reference', action='store_true', default=False,
                     help='by default, the value of a label is directly the '
@@ -31,6 +31,8 @@ parser.add_argument('-r', '--use-reference', action='store_true', default=False,
                          '0, 1, 2), use this option to create a index '
                          '"reference", then the color is get via '
                          'colors[ref[label_val]]')
+parser.add_argument('-i', '--interactive', action='store_true', default=False,
+                    help='use gui to navigate image')
 args = parser.parse_args()
 
 image_path = args.image
@@ -67,6 +69,16 @@ if args.use_reference:
     new_colors[label_set, :] = colors[indices, :]
     colors = new_colors
 
+def button_click_exit_mainloop (event):
+    event.widget.quit() # this will cause mainloop to unblock.
+
+if args.interactive:
+    import tkinter
+    from PIL import ImageTk
+    root = tkinter.Tk()
+    root.bind("<Button>", button_click_exit_mainloop)
+    root.geometry('300x300')
+
 image_slice = image[:, :, sliceid]
 stacked_image = np.repeat(image_slice[:, :, None], 3, 2)
 labels_slice = labels[:, :, sliceid]
@@ -75,4 +87,12 @@ stacked_labels = colors[labels_slice, :]
 image_pil = smp.toimage(stacked_image).convert('RGBA')
 labels_pil = smp.toimage(stacked_labels).convert('RGBA')
 overlay_pil = Image.alpha_composite(image_pil, labels_pil)
-overlay_pil.show()
+
+if args.interactive:
+    tkpi = ImageTk.PhotoImage(overlay_pil)
+    label_image = tkinter.Label(root, image=tkpi)
+    label_image.place(x=0,y=0,width=300,height=300)
+    label_image.pack()
+    root.mainloop()
+else:
+    overlay_pil.show()
