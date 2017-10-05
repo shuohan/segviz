@@ -2,10 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import numpy as np
-import nibabel as nib
-import scipy.misc as smp
-from PIL import Image
 
 parser = argparse.ArgumentParser(description='show labels on top of image')
 parser.add_argument('image')
@@ -34,6 +30,11 @@ parser.add_argument('-r', '--use-reference', action='store_true', default=False,
 parser.add_argument('-i', '--interactive', action='store_true', default=False,
                     help='use gui to navigate image')
 args = parser.parse_args()
+
+import numpy as np
+import nibabel as nib
+import scipy.misc as smp
+from PIL import Image
 
 image_path = args.image
 labels_path = args.labels
@@ -65,34 +66,61 @@ if args.use_reference:
     label_set = np.unique(labels)
     new_colors = np.empty((np.max(label_set)+1, colors.shape[1]))
     indices = np.mod(np.arange(len(label_set), dtype=int), colors.shape[0])
-    print(indices)
     new_colors[label_set, :] = colors[indices, :]
     colors = new_colors
 
+def get_slices():
+
+    image_slice = image[:, :, sliceid]
+    stacked_image = np.repeat(image_slice[:, :, None], 3, 2)
+    labels_slice = labels[:, :, sliceid]
+    stacked_labels = colors[labels_slice, :]
+
+    image_pil = smp.toimage(stacked_image).convert('RGBA')
+    labels_pil = smp.toimage(stacked_labels).convert('RGBA')
+    overlay_pil = Image.alpha_composite(image_pil, labels_pil)
+
+    return image_pil, labels_pil, overlay_pil
+
+image_pil, labels_pil, overlay_pil = get_slices()
+
 def button_click_exit_mainloop (event):
     event.widget.quit() # this will cause mainloop to unblock.
+
+def next_slice(event):
+    global sliceid, image_pil, labels_pil, overlay_pil, label_image
+    sliceid = min(sliceid + 1, image.shape[2]-1)
+    print(sliceid)
+    image_pil, labels_pil, overlay_pil = get_slices()
+    tkpi = ImageTk.PhotoImage(overlay_pil)
+    label_image.configure(image=tkpi)
+    label_image.image = tkpi
+
+def previous_slice(event):
+    global sliceid, image_pil, labels_pil, overlay_pil, label_image
+    sliceid = max(sliceid - 1, 0)
+    print(sliceid)
+    image_pil, labels_pil, overlay_pil = get_slices()
+    tkpi = ImageTk.PhotoImage(overlay_pil)
+    label_image.configure(image=tkpi)
+    label_image.image = tkpi
 
 if args.interactive:
     import tkinter
     from PIL import ImageTk
     root = tkinter.Tk()
     root.bind("<Button>", button_click_exit_mainloop)
+    root.bind("<Up>", previous_slice)
+    root.bind("<Down>", next_slice)
     root.geometry('300x300')
 
-image_slice = image[:, :, sliceid]
-stacked_image = np.repeat(image_slice[:, :, None], 3, 2)
-labels_slice = labels[:, :, sliceid]
-stacked_labels = colors[labels_slice, :]
-
-image_pil = smp.toimage(stacked_image).convert('RGBA')
-labels_pil = smp.toimage(stacked_labels).convert('RGBA')
-overlay_pil = Image.alpha_composite(image_pil, labels_pil)
-
 if args.interactive:
-    tkpi = ImageTk.PhotoImage(overlay_pil)
-    label_image = tkinter.Label(root, image=tkpi)
+    label_image = tkinter.Label(root)
     label_image.place(x=0,y=0,width=300,height=300)
     label_image.pack()
+    tkpi = ImageTk.PhotoImage(overlay_pil)
+    label_image.configure(image=tkpi)
+    label_image.image = tkpi
     root.mainloop()
 else:
     overlay_pil.show()
