@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import time
 
 parser = argparse.ArgumentParser(description='show labels on top of image')
 parser.add_argument('image')
@@ -31,14 +32,18 @@ parser.add_argument('-i', '--interactive', action='store_true', default=False,
                     help='use gui to navigate image')
 args = parser.parse_args()
 
+start = time.time()
 import numpy as np
 import nibabel as nib
 import scipy.misc as smp
 from PIL import Image
+print('parse', time.time() - start)
 
 image_path = args.image
 labels_path = args.labels
 
+
+start = time.time()
 if args.colors is None:
     from PIL import ImageColor
     colors = np.empty((len(ImageColor.colormap), 3))
@@ -62,6 +67,8 @@ alphas = alpha * np.ones((colors.shape[0], 1))
 alphas[0] = 0
 colors = np.hstack([colors, alphas])
 
+print('load', time.time() - start)
+
 if args.use_reference:
     label_set = np.unique(labels)
     new_colors = np.empty((np.max(label_set)+1, colors.shape[1]))
@@ -82,7 +89,9 @@ def get_slices():
 
     return image_pil, labels_pil, overlay_pil
 
+start = time.time()
 image_pil, labels_pil, overlay_pil = get_slices()
+print('init images', time.time() - start)
 
 def button_click_exit_mainloop (event):
     event.widget.quit() # this will cause mainloop to unblock.
@@ -106,6 +115,7 @@ def previous_slice(event):
     label_image.image = tkpi
 
 if args.interactive:
+    start = time.time()
     import tkinter
     from PIL import ImageTk
     root = tkinter.Tk()
@@ -113,14 +123,13 @@ if args.interactive:
     root.bind("<Up>", previous_slice)
     root.bind("<Down>", next_slice)
     root.geometry('300x300')
-
-if args.interactive:
     label_image = tkinter.Label(root)
     label_image.place(x=0,y=0,width=300,height=300)
     label_image.pack()
     tkpi = ImageTk.PhotoImage(overlay_pil)
     label_image.configure(image=tkpi)
     label_image.image = tkpi
+    print('setup gui', time.time() - start)
     root.mainloop()
 else:
     overlay_pil.show()
