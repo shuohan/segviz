@@ -14,12 +14,15 @@ labels_path = 'labels.nii'
 colors_path = '/home/shuo/projects/test_label_colors/colors.npy'
 
 sliceid = 100
-alpha = 0.1
+alpha = 1
 
 start = time()
 image = np.swapaxes(nib.load(image_path).get_data(), 0, 1)
 labels = np.swapaxes(nib.load(labels_path).get_data(), 0, 1)
 colors = np.load(colors_path)
+alphas = np.ones((colors.shape[0], 1))
+alphas[1] = 0
+colors = np.hstack([colors, alphas])
 print('load', time() - start)
 
 start = time()
@@ -30,29 +33,17 @@ mask = labels != 0
 inverse_mask = np.logical_not(mask)
 
 start = time()
-overlay_image = image * mask
-overlay_labels = labels * mask
-rest = image * inverse_mask
-print('numpy', time() - start)
+image_slice = image[:, :, sliceid]
+stacked_image = np.dstack([image_slice, image_slice, image_slice,
+                           np.max(image_slice) * np.ones(image_slice.shape)])
+image_pil = smp.toimage(stacked_image).convert('RGBA')
 
-start = time()
-image_slice = overlay_image[:, :, sliceid]
-stacked_overlay_image = np.dstack([image_slice, image_slice, image_slice])
-overlay_image_pil = smp.toimage(stacked_overlay_image)
-
-labels_slice = overlay_labels[:, :, sliceid]
+labels_slice = labels[:, :, sliceid]
 stacked_labels = np.dstack([colors[labels_slice, 0], colors[labels_slice, 1], 
-                            colors[labels_slice, 2]]) 
-overlay_labels_pil = smp.toimage(stacked_labels)
+                            colors[labels_slice, 2], colors[labels_slice, 3]])
+labels_pil = smp.toimage(stacked_labels).convert('RGBA')
 
-overlay_pil = Image.blend(overlay_image_pil, overlay_labels_pil, alpha)
+overlay_pil = Image.blend(image_pil, labels_pil, alpha)
 overlay_pil.show()
 
-rest_slice = rest[:, :, sliceid]
-stacked_rest = np.dstack([rest_slice, rest_slice, rest_slice])
-rest_pil = smp.toimage(stacked_rest)
-result = ImageChops.add(overlay_pil, rest_pil)
-
 print('pil', time() - start)
-
-result.show()
