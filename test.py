@@ -34,17 +34,14 @@ inverse_mask = np.logical_not(mask)
 
 start = time()
 image_slice = image[:, :, sliceid]
-stacked_image = np.dstack([image_slice, image_slice, image_slice])
-image_pil = smp.toimage(stacked_image).convert('RGBA')
-
+stacked_image = np.repeat(image_slice[:, :, None], 3, 2)
 labels_slice = labels[:, :, sliceid]
-print(colors[0, :])
 stacked_labels = colors[labels_slice, :]
-mask = stacked_labels[:, :, 3] * alpha
-mask_pil = smp.toimage(mask)
-labels_pil = smp.toimage(stacked_labels).convert('RGBA')
+print('numpy', time() - start)
 
+start = time()
+image_pil = smp.toimage(stacked_image).convert('RGBA')
+labels_pil = smp.toimage(stacked_labels).convert('RGBA')
 overlay_pil = Image.alpha_composite(image_pil, labels_pil)
 overlay_pil.show()
-
 print('pil', time() - start)
