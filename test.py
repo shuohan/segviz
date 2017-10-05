@@ -8,6 +8,7 @@ import copy
 import scipy.misc as smp
 from time import time
 import sys
+from scipy.sparse import csr_matrix
 
 image_path = 'image.nii'
 labels_path = 'labels.nii'
@@ -26,8 +27,15 @@ colors = np.hstack([colors, alphas])
 print('load', time() - start)
 
 start = time()
-labels = np.digitize(labels, np.unique(labels), right=True)
-print('digitize', time() - start)
+label_set = np.unique(labels)
+new_colors = np.zeros((np.max(label_set) + 1, colors.shape[1]))
+new_colors[label_set, :] = colors[:len(label_set), :]
+colors = new_colors
+print('colors', time() - start)
+
+# start = time()
+# labels = np.digitize(labels, np.unique(labels), right=True)
+# print('digitize', time() - start)
 
 mask = labels != 0
 inverse_mask = np.logical_not(mask)
