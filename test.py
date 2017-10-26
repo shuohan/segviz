@@ -29,7 +29,7 @@ def load_labels(labels_path):
     labels = np.round(labels).astype(np.int32)
     return labels
 
-def load_colors(colors_path, alpha=0.5):
+def load_colors(colors_path):
     # the first row is the background color
     if not os.path.isfile(colors_path):
         print('File', colors_path, 'does not exist. Using default colormap')
@@ -38,8 +38,7 @@ def load_colors(colors_path, alpha=0.5):
         colors = np.load(colors_path)
         colors = (MAX_VAL * colors).astype(np.uint8)
     if colors.shape[1] < 4: # no alpha channel
-        alpha = np.uint8(MAX_VAL * alpha)
-        alphas = alpha * np.ones((colors.shape[0], 1), dtype=np.uint8)
+        alphas = MAX_VAL * np.ones((colors.shape[0], 1), dtype=np.uint8)
         colors = np.hstack([colors, alphas])
     colors[0, 3] = 0 # background alpha is 0
     return colors
@@ -61,12 +60,16 @@ def convert_colors(colors, labels):
 
 class Overlay:
 
-    def __init__(self, image, initial_sliceid=0, **kwargs):
+    def __init__(self, image, initial_sliceid=0, initial_alpha=0.5, **kwargs):
         assert image.dtype == np.uint8
         self._sliceid = int(initial_sliceid)
         self._image = image
         self._min_sliceid = 0
         self._max_sliceid = self._image.shape[2] - 1
+        self._alpha = initial_alpha
+        self._alpha_step = 0.05
+        self._size = (image.shape[0], image.shape[1])
+        self._ratio = self._size[0] / self._size[1]
         if 'labels' in kwargs and 'colors' in kwargs:
             assert labels.dtype == np.int32
             assert colors.dtype == np.uint8
@@ -80,6 +83,16 @@ class Overlay:
             self._overlay_pil = self._compose()
         else:
             self._overlay_pil = self._create_image_pil()
+        self._overlay_pil = self._overlay_pil.resize(self._size,
+                                                     Image.ANTIALIAS)
+
+    def resize(self, width, height):
+        ratio = width / height
+        if ratio > self._ratio:
+            width = height * self._ratio
+        if ratio < self._ratio:
+            height = width / self._ratio
+        self._size = (int(width), int(height))
 
     def get_pil(self):
         self._update()
@@ -97,12 +110,25 @@ class Overlay:
     def go_to_previous_slice(self):
         self._sliceid = max(self._sliceid-1, self._min_sliceid)
 
+    def get_alpha(self):
+        return self._alpha
+
+    def set_alpha(self, alpha):
+        self._alpha = max(min(alpha, 1), 0)
+
+    def increase_alpha(self):
+        self._alpha = min(self._alpha+self._alpha_step, 1)
+
+    def decrease_alpha(self):
+        self._alpha = max(self._alpha-self._alpha_step, 0)
+
     def to_png(self, filename):
         self._overlay_pil.save(filename, 'PNG')
 
     def _compose(self):
         image_pil = self._create_image_pil()
         labels_slice = self._colors[self._labels[:, :, self._sliceid], :]
+        labels_slice[:, :, 3] = labels_slice[:, :, 3] * self._alpha
         labels_pil = Image.fromarray(labels_slice).convert('RGBA')
         overlay_pil = Image.alpha_composite(image_pil, labels_pil)
         return overlay_pil
@@ -157,12 +183,13 @@ if __name__ == '__main__':
 
     if args.labels is not None:
         labels = load_labels(args.labels)
-        colors = load_colors(args.colors, args.alpha)
+        colors = load_colors(args.colors)
         if args.convert_colors:
             colors = convert_colors(colors, labels)
-        overlay = Overlay(image, args.sliceid, labels=labels, colors=colors)
+        overlay = Overlay(image, args.sliceid, args.alpha, labels=labels,
+                          colors=colors)
     else:
-        overlay = Overlay(image, args.sliceid)
+        overlay = Overlay(image, args.sliceid, args.alpha)
 
     if not args.interactive:
         overlay.get_pil().show()
@@ -172,27 +199,40 @@ if __name__ == '__main__':
         import tkinter
         from PIL import ImageTk
 
-        class Canvas(tkinter.Label):
-            def __init__(self, master, overlay, **kwargs):
-                self._overlay = overlay
+        class LabelCanvas(tkinter.Label):
+            def __init__(self, master, image_holder, **kwargs):
                 super().__init__(master, **kwargs)
+                self._image_holder = image_holder
             def update(self):
-                photo = ImageTk.PhotoImage(self._overlay.get_pil())
+                image = self._image_holder.get_pil()
+                photo = ImageTk.PhotoImage(image)
                 self.configure(image=photo)
                 self.image = photo
             def go_to_previous_slice(self):
-                self._overlay.go_to_previous_slice()
+                self._image_holder.go_to_previous_slice()
                 self.update()
             def go_to_next_slice(self):
-                self._overlay.go_to_next_slice()
+                self._image_holder.go_to_next_slice()
+                self.update()
+            def increase_alpha(self):
+                self._image_holder.increase_alpha()
+                self.update()
+            def decrease_alpha(self):
+                self._image_holder.decrease_alpha()
+                self.update()
+            def resize(self, event):
+                self._image_holder.resize(event.width, event.height)
                 self.update()
 
         root = tkinter.Tk()
-        canvas = Canvas(root, overlay)
+        canvas = LabelCanvas(root, overlay)
         root.bind("<Up>", lambda event: canvas.go_to_previous_slice())
         root.bind("<Down>", lambda event: canvas.go_to_next_slice())
-        root.geometry('300x300')
-        canvas.place(x=0,y=0,width=300,height=300)
-        canvas.pack()
+        root.bind("<Left>", lambda event: canvas.decrease_alpha())
+        root.bind("<Right>", lambda event: canvas.increase_alpha())
+        root.bind("<Configure>", lambda event: canvas.resize(event))
+        root.geometry('500x500')
+        canvas.place(x=0,y=0)
+        canvas.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         canvas.update()
         root.mainloop()
