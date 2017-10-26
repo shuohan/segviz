@@ -124,6 +124,9 @@ class Overlay:
     def to_png(self, filename):
         self._overlay_pil.save(filename, 'PNG')
 
+    def print_info(self):
+        print('slice: %d; alpha: %.2f' % (self._sliceid, self._alpha), end='\r')
+
     def _compose(self):
         image_pil = self._create_image_pil()
         labels_slice = self._colors[self._labels[:, :, self._sliceid], :]
@@ -207,6 +210,7 @@ if __name__ == '__main__':
                 photo = ImageTk.PhotoImage(image)
                 self.configure(image=photo)
                 self.image = photo
+                self._image_holder.print_info()
             def go_to_previous_slice(self):
                 self._image_holder.go_to_previous_slice()
                 self.update()
