@@ -83,8 +83,7 @@ class Overlay:
             self._overlay_pil = self._compose()
         else:
             self._overlay_pil = self._create_image_pil()
-        self._overlay_pil = self._overlay_pil.resize(self._size,
-                                                     Image.ANTIALIAS)
+        self._overlay_pil = self._overlay_pil.resize(self._size, Image.BILINEAR)
 
     def resize(self, width, height):
         ratio = width / height
