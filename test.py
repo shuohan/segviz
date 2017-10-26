@@ -53,11 +53,8 @@ def get_default_colormap():
 def convert_colors(colors, labels):
     label_set = np.unique(labels)
     new_colors_shape = (np.max(label_set)+1, colors.shape[1])
-    print(colors.shape, new_colors_shape)
     new_colors = np.empty(new_colors_shape, dtype=np.uint8)
     indices = np.mod(np.arange(len(label_set), dtype=int), colors.shape[0])
-    print(label_set)
-    print(indices)
     new_colors[label_set, :] = colors[indices, :]
     return new_colors
 
@@ -90,6 +87,9 @@ class Overlay:
 
     def get_sliceid(self):
         return self._sliceid
+
+    def set_sliceid(self, sliceid):
+        self._sliceid = max(min(sliceid, self._max_sliceid), self._min_sliceid)
 
     def go_to_next_slice(self):
         self._sliceid = min(self._sliceid+1, self._max_sliceid)
