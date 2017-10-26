@@ -124,6 +124,10 @@ class Overlay:
     def to_png(self, filename):
         self._overlay_pil.save(filename, 'PNG')
 
+    def print_label(self, x, y):
+        # label = self._labels[int(x), int(y), self._sliceid]
+        pass
+
     def print_info(self):
         print('slice: %d; alpha: %.2f' % (self._sliceid, self._alpha), end='\r')
 
@@ -226,6 +230,8 @@ if __name__ == '__main__':
             def resize(self, event):
                 self._image_holder.resize(event.width, event.height)
                 self.update()
+            def print_label(self, event):
+                self._image_holder.print_label(event.x, event.y)
 
         root = tkinter.Tk()
         canvas = LabelCanvas(root, overlay)
@@ -234,6 +240,7 @@ if __name__ == '__main__':
         root.bind("<Left>", lambda event: canvas.decrease_alpha())
         root.bind("<Right>", lambda event: canvas.increase_alpha())
         root.bind("<Configure>", lambda event: canvas.resize(event))
+        root.bind("<Button 1>", lambda event: canvas.print_label(event))
         root.geometry('500x500')
         canvas.place(x=0,y=0)
         canvas.pack(fill=tkinter.BOTH, expand=tkinter.YES)
