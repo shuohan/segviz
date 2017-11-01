@@ -68,7 +68,7 @@ class Overlay:
         self._max_sliceid = self._image.shape[2] - 1
         self._alpha = initial_alpha
         self._alpha_step = 0.05
-        self._size = (image.shape[0], image.shape[1])
+        self._size = (image.shape[1], image.shape[0])
         self._ratio = self._size[0] / self._size[1]
         if 'labels' in kwargs and 'colors' in kwargs:
             assert labels.dtype == np.int32
