@@ -60,13 +60,27 @@ def convert_colors(colors, labels):
 
 class Overlay:
 
+    """
+    Generates a slice of the label volume on top of the image (3D) using alpha
+    composition. The alpha value and the slice index can be updated
+    interactively
+    """
+
     def __init__(self, image, initial_sliceid=0, initial_alpha=0.5, **kwargs):
+        """
+        - kwargs: 
+        > "labels": the label volume, the value at each pixel is the
+          index referring to "colors".
+        > "colors": colormap of the label volume, num_colors x 3 (or 4 for an
+          alpha channel) RGB array
+        """
         assert image.dtype == np.uint8
         self._sliceid = int(initial_sliceid)
         self._image = image
         self._min_sliceid = 0
         self._max_sliceid = self._image.shape[2] - 1
-        self._alpha = initial_alpha
+        # alpha of the label volume; alpha for the image is (1 - self._alpha)
+        self._alpha = initial_alpha 
         self._alpha_step = 0.05
         self._size = (image.shape[1], image.shape[0])
         self._ratio = self._size[0] / self._size[1]
@@ -86,6 +100,7 @@ class Overlay:
         self._overlay_pil = self._overlay_pil.resize(self._size, Image.BILINEAR)
 
     def resize(self, width, height):
+        # keep ratio (width / height) unchanged
         ratio = width / height
         if ratio > self._ratio:
             width = height * self._ratio
