@@ -254,34 +254,47 @@ if __name__ == '__main__':
                 self.configure(image=photo)
                 self.image = photo
                 self._image_holder.print_info()
-            def go_to_previous_slice(self):
+            def go_to_previous_slice(self, event):
                 self._image_holder.go_to_previous_slice()
                 self.update()
-            def go_to_next_slice(self):
+            def go_to_next_slice(self, event):
                 self._image_holder.go_to_next_slice()
                 self.update()
-            def increase_alpha(self):
+            def increase_alpha(self, event):
                 self._image_holder.increase_alpha()
                 self.update()
-            def decrease_alpha(self):
+            def decrease_alpha(self, event):
                 self._image_holder.decrease_alpha()
                 self.update()
+            def focus_master(self, event):
+                self.master.focus_set()
             def resize(self, event):
                 self._image_holder.resize(event.width, event.height)
                 self.update()
             def print_label(self, event):
                 self._image_holder.print_label(event.x, event.y)
+            def propagate(self, event):
+                global canvases
+                sliceid = self._image_holder.get_sliceid()
+                for c in canvases:
+                    c._image_holder.set_sliceid(sliceid)
+                    c.update()
 
         root = tkinter.Tk()
-        canvas = LabelCanvas(root, overlay)
-        root.bind("<Up>", lambda event: canvas.go_to_previous_slice())
-        root.bind("<Down>", lambda event: canvas.go_to_next_slice())
-        root.bind("<Left>", lambda event: canvas.decrease_alpha())
-        root.bind("<Right>", lambda event: canvas.increase_alpha())
-        root.bind("<Configure>", lambda event: canvas.resize(event))
-        root.bind("<Button 1>", lambda event: canvas.print_label(event))
         root.geometry('500x500')
-        canvas.place(x=0,y=0)
-        canvas.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        canvas.update()
+        canvases = list()
+        for overlay in overlays:
+            frame = tkinter.Frame(root)
+            frame.pack(fill=tkinter.BOTH, expand=tkinter.YES, side=tkinter.LEFT)
+            canvas = LabelCanvas(frame, overlay)
+            canvas.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+            canvas.update()
+            canvases.append(canvas)
+            frame.bind("<Up>", canvas.go_to_previous_slice)
+            frame.bind("<Down>", canvas.go_to_next_slice)
+            frame.bind("<Left>", canvas.decrease_alpha)
+            frame.bind("<Right>", canvas.increase_alpha)
+            frame.bind("<Return>", canvas.propagate)
+            # frame.bind("<Configure>", canvas.resize)
+            canvas.bind("<Button-1>", canvas.focus_master)
         root.mainloop()
