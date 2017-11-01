@@ -10,7 +10,7 @@ from PIL import Image, ImageColor
 MAX_VAL = 255
 
 def load_image(image_path):
-    image = nib.load(args.image).get_data()
+    image = nib.load(image_path).get_data()
     image = np.swapaxes(image, 0, 1) # transpose xy
     image = (image / np.max(image) * MAX_VAL).astype(np.uint8)
     return image
@@ -24,7 +24,7 @@ def rescale_image(image, min_val, max_val):
     return image
 
 def load_labels(labels_path):
-    labels = nib.load(args.labels).get_data()
+    labels = nib.load(labels_path).get_data()
     labels = np.swapaxes(labels, 0, 1)
     labels = np.round(labels).astype(np.int32)
     return labels
@@ -161,11 +161,25 @@ class Overlay:
         return image_pil
 
 
+def concatenate_pils(pils):
+    widths, heights = zip(*[pil.size for pil in pils])
+    total_width = sum(widths)
+    max_height = max(heights)
+    result = Image.new('RGBA', (total_width, max_height))
+    x_offset = 0
+    for pil, w in zip(pils, widths):
+        result.paste(pil, (x_offset, 0))
+        x_offset += w
+    return result
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='show labels on top of image')
-    parser.add_argument('image')
-    parser.add_argument('-l', '--labels', required=False, default=None)
+    parser.add_argument('-p', '--input-pair', nargs='+', required=True,
+                        metavar=('IMAGE', 'LABEL_VOLUME'), action='append',
+                        help='image and label_volume pair; label_volume is '
+                             'optional. Multiple pairs are acceptable')
     parser.add_argument('-c', '--colors', default=None, required=False,
                         help='a numpy file containing the colors of labels; '
                              'the loaded colors should be a num_colors x 3 '
@@ -197,25 +211,35 @@ if __name__ == '__main__':
                         required=False)
     args = parser.parse_args()
 
-    image = load_image(args.image)
-    image = rescale_image(image, args.min, args.max)
-    if args.sliceid is None:
-        args.sliceid = int(image.shape[2] / 2) 
-
-    if args.labels is not None:
-        labels = load_labels(args.labels)
+    if args.colors is not None:
         colors = load_colors(args.colors)
-        if args.convert_colors:
-            colors = convert_colors(colors, labels)
-        overlay = Overlay(image, args.sliceid, args.alpha, labels=labels,
-                          colors=colors)
-    else:
-        overlay = Overlay(image, args.sliceid, args.alpha)
+
+    overlays = list()
+    for pair_paths in args.input_pair:
+        image = load_image(pair_paths[0])
+        image = rescale_image(image, args.min, args.max)
+        if args.sliceid is None:
+            sliceid = int(image.shape[2] / 2) 
+        else:
+            sliceid = args.sliceid
+        if len(pair_paths) > 1:
+            labels = load_labels(pair_paths[1])
+            if args.convert_colors:
+                converted_colors = convert_colors(colors, labels)
+            overlay = Overlay(image, sliceid, args.alpha, labels=labels,
+                              colors=converted_colors)
+        else:
+            overlay = Overlay(image, sliceid, args.alpha)
+        overlays.append(overlay)
 
     if not args.interactive:
-        overlay.get_pil().show()
+        pils = [overlay.get_pil() for overlay in overlays]
+        montage = concatenate_pils(pils)
+        montage.show()
 
     else:
+
+        overlay = overlays[0]
 
         import tkinter
         from PIL import ImageTk
