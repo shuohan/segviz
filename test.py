@@ -85,10 +85,13 @@ class Overlay:
         self._size = (image.shape[1], image.shape[0])
         self._ratio = self._size[0] / self._size[1]
         if 'labels' in kwargs and 'colors' in kwargs:
+            labels = kwargs['labels']
+            colors = kwargs['colors']
             assert labels.dtype == np.int32
             assert colors.dtype == np.uint8
             self._labels = labels
             self._colors = colors
+            print(self._colors.shape)
         self._overlay_pil = None
         self._update() # produce overlay_pil
 
@@ -209,23 +212,40 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--interactive', action='store_true', 
                         default=False, help='use gui to navigate image',
                         required=False)
+    parser.add_argument('-ori', '--orientation', required=False, default=None)
     args = parser.parse_args()
 
     if args.colors is not None:
         colors = load_colors(args.colors)
 
     overlays = list()
-    for pair_paths in args.input_pair:
-        image = load_image(pair_paths[0])
+    for i, pair_paths in enumerate(args.input_pair):
+        im_dirname, im_basename = os.path.split(pair_paths[0])
+        tmp_im_filename = os.path.join(im_dirname,
+                                       'reorient_'+str(i)+im_basename)
+        command = '3dresample -orient %s -prefix %s -input %s'
+        command = command % (args.orientation, tmp_im_filename, pair_paths[0])
+        os.system(command)
+        image = load_image(tmp_im_filename)
         image = rescale_image(image, args.min, args.max)
+        os.system('rm -f '+tmp_im_filename)
         if args.sliceid is None:
             sliceid = int(image.shape[2] / 2) 
         else:
             sliceid = args.sliceid
         if len(pair_paths) > 1:
-            labels = load_labels(pair_paths[1])
+            lab_dirname, lab_basename = os.path.split(pair_paths[1])
+            tmp_lab_filename = os.path.join(lab_dirname,
+                                            'reorient_'+str(i)+lab_basename)
+            command = '3dresample -orient %s -rmode NN -prefix %s -input %s'
+            command = command % (args.orientation, tmp_lab_filename,
+                                 pair_paths[1])
+            os.system(command)
+            labels = load_labels(tmp_lab_filename)
+            os.system('rm -f '+tmp_lab_filename)
             if args.convert_colors:
                 converted_colors = convert_colors(colors, labels)
+                print(converted_colors.shape)
             overlay = Overlay(image, sliceid, args.alpha, labels=labels,
                               colors=converted_colors)
         else:
