@@ -212,8 +212,12 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--interactive', action='store_true', 
                         default=False, help='use gui to navigate image',
                         required=False)
+    parser.add_argument('-o', '--output-filename', type=str, required=False,
+                        default=None)
     parser.add_argument('-ori', '--orientation', required=False, default=None)
     args = parser.parse_args()
+
+    print(args.output_filename)
 
     if args.colors is not None:
         colors = load_colors(args.colors)
@@ -221,10 +225,13 @@ if __name__ == '__main__':
     overlays = list()
     for i, pair_paths in enumerate(args.input_pair):
         im_dirname, im_basename = os.path.split(pair_paths[0])
+        obj = nib.load(pair_paths[0])
+        res = np.min(obj.header.get_zooms())
         tmp_im_filename = os.path.join(im_dirname,
                                        'reorient_'+str(i)+im_basename)
-        command = '3dresample -orient %s -prefix %s -input %s'
-        command = command % (args.orientation, tmp_im_filename, pair_paths[0])
+        command = '3dresample -orient %s -prefix %s -input %s -dxyz %.2f %.2f %.2f'
+        command = command % (args.orientation, tmp_im_filename, pair_paths[0],
+                             res, res, res)
         os.system(command)
         image = load_image(tmp_im_filename)
         image = rescale_image(image, args.min, args.max)
@@ -237,9 +244,9 @@ if __name__ == '__main__':
             lab_dirname, lab_basename = os.path.split(pair_paths[1])
             tmp_lab_filename = os.path.join(lab_dirname,
                                             'reorient_'+str(i)+lab_basename)
-            command = '3dresample -orient %s -rmode NN -prefix %s -input %s'
+            command = '3dresample -orient %s -rmode NN -prefix %s -input %s -dxyz %.2f %.2f %.2f'
             command = command % (args.orientation, tmp_lab_filename,
-                                 pair_paths[1])
+                                 pair_paths[1], res, res, res)
             os.system(command)
             labels = load_labels(tmp_lab_filename)
             os.system('rm -f '+tmp_lab_filename)
@@ -255,7 +262,11 @@ if __name__ == '__main__':
     if not args.interactive:
         pils = [overlay.get_pil() for overlay in overlays]
         montage = concatenate_pils(pils)
-        montage.show()
+        if args.output_filename is None:
+            montage.show()
+        else:
+            print('saving')
+            montage.save(args.output_filename, 'PNG')
 
     else:
 
