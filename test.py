@@ -164,15 +164,24 @@ class Overlay:
         return image_pil
 
 
-def concatenate_pils(pils):
-    widths, heights = zip(*[pil.size for pil in pils])
-    total_width = sum(widths)
-    max_height = max(heights)
-    result = Image.new('RGBA', (total_width, max_height))
+def concatenate_pils(all_pils):
+    total_widths = list()
+    max_heights = list()
+    for pils in all_pils:
+        widths, heights = zip(*[pil.size for pil in pils])
+        total_widths.append(sum(widths))
+        max_heights.append(max(heights))
+    result = Image.new('RGBA', (max(total_widths), sum(max_heights)))
     x_offset = 0
-    for pil, w in zip(pils, widths):
-        result.paste(pil, (x_offset, 0))
-        x_offset += w
+    y_offset = 0
+    for pils, h in zip(all_pils, max_heights):
+        for pil in pils:
+            size = pil.size
+            print(pil, size, x_offset, y_offset)
+            result.paste(pil, (x_offset, y_offset))
+            x_offset += size[0]
+        x_offset = 0
+        y_offset += h
     return result
 
 
@@ -195,7 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--alpha', help='transparency of the label image',
                         default=0.5, required=False, type=float)
     parser.add_argument('-n', '--sliceid', help='slice no.', default=None,
-                        type=int, required=False)
+                        type=int, required=False, nargs='+')
     parser.add_argument('-min', help='min cutoff value of image, in uint8',
                         type=np.uint8, default=0, required=False)
     parser.add_argument('-max', help='max cutoff value of image, in uint8',
@@ -223,44 +232,50 @@ if __name__ == '__main__':
         colors = load_colors(args.colors)
 
     overlays = list()
-    for i, pair_paths in enumerate(args.input_pair):
-        im_dirname, im_basename = os.path.split(pair_paths[0])
-        obj = nib.load(pair_paths[0])
-        res = np.min(obj.header.get_zooms())
-        tmp_im_filename = os.path.join(im_dirname,
-                                       'reorient_'+str(i)+im_basename)
-        command = '3dresample -orient %s -prefix %s -input %s -dxyz %.2f %.2f %.2f'
-        command = command % (args.orientation, tmp_im_filename, pair_paths[0],
-                             res, res, res)
-        os.system(command)
-        image = load_image(tmp_im_filename)
-        image = rescale_image(image, args.min, args.max)
-        os.system('rm -f '+tmp_im_filename)
-        if args.sliceid is None:
-            sliceid = int(image.shape[2] / 2) 
-        else:
-            sliceid = args.sliceid
-        if len(pair_paths) > 1:
-            lab_dirname, lab_basename = os.path.split(pair_paths[1])
-            tmp_lab_filename = os.path.join(lab_dirname,
-                                            'reorient_'+str(i)+lab_basename)
-            command = '3dresample -orient %s -rmode NN -prefix %s -input %s -dxyz %.2f %.2f %.2f'
-            command = command % (args.orientation, tmp_lab_filename,
-                                 pair_paths[1], res, res, res)
+    sliceid = args.sliceid
+    for sid in sliceid:
+        overlay_slices = list()
+        for i, pair_paths in enumerate(args.input_pair):
+            im_dirname, im_basename = os.path.split(pair_paths[0])
+            obj = nib.load(pair_paths[0])
+            res = np.min(obj.header.get_zooms())
+            tmp_im_filename = os.path.join(im_dirname,
+                                           'reorient_'+str(i)+im_basename)
+            command = '3dresample -orient %s -prefix %s -input %s -dxyz %.2f %.2f %.2f'
+            command = command % (args.orientation, tmp_im_filename, pair_paths[0],
+                                 res, res, res)
             os.system(command)
-            labels = load_labels(tmp_lab_filename)
-            os.system('rm -f '+tmp_lab_filename)
-            if args.convert_colors:
-                converted_colors = convert_colors(colors, labels)
-                print(converted_colors.shape)
-            overlay = Overlay(image, sliceid, args.alpha, labels=labels,
-                              colors=converted_colors)
-        else:
-            overlay = Overlay(image, sliceid, args.alpha)
-        overlays.append(overlay)
+            image = load_image(tmp_im_filename)
+            image = rescale_image(image, args.min, args.max)
+            os.system('rm -f '+tmp_im_filename)
+            # if args.sliceid is None:
+            #     sliceid = [int(image.shape[2] / 2)]
+            # else:
+            #     sliceid = args.sliceid
+            if len(pair_paths) > 1:
+                lab_dirname, lab_basename = os.path.split(pair_paths[1])
+                tmp_lab_filename = os.path.join(lab_dirname,
+                                                'reorient_'+str(i)+lab_basename)
+                command = '3dresample -orient %s -rmode NN -prefix %s -input %s -dxyz %.2f %.2f %.2f'
+                command = command % (args.orientation, tmp_lab_filename,
+                                     pair_paths[1], res, res, res)
+                os.system(command)
+                labels = load_labels(tmp_lab_filename)
+                os.system('rm -f '+tmp_lab_filename)
+                if args.convert_colors:
+                    converted_colors = convert_colors(colors, labels)
+                    print(converted_colors.shape)
+                overlay = Overlay(image, sid, args.alpha, labels=labels,
+                                  colors=converted_colors)
+            else:
+                overlay = Overlay(image, sliceid, args.alpha)
+            overlay_slices.append(overlay)
+        overlays.append(overlay_slices)
 
     if not args.interactive:
-        pils = [overlay.get_pil() for overlay in overlays]
+        pils = list()
+        for overlay_slices in overlays:
+            pils.append([overlay.get_pil() for overlay in overlay_slices])
         montage = concatenate_pils(pils)
         if args.output_filename is None:
             montage.show()
@@ -270,7 +285,7 @@ if __name__ == '__main__':
 
     else:
 
-        overlay = overlays[0]
+        overlays = overlays[0]
 
         import tkinter
         from PIL import ImageTk
