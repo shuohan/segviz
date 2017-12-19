@@ -25,7 +25,7 @@ class Reslicer:
                                       [0, -1, 0, 0],
                                       [0, 0, 1, 0],
                                       [0, 0, 0, 1]])
-        affine = self._LPI_minus_affine.dot(LPI_to_RAI_affine)
+        affine = LPI_to_RAI_affine.dot(self._LPI_minus_affine)
         return self._reslice(self.image_array, affine)
 
     def to_RSA_minus(self):
@@ -33,11 +33,16 @@ class Reslicer:
                                       [0, 0, -1, 0],
                                       [0, -1, 0, 0],
                                       [0, 0, 0, 1]])
-        affine = self._LPI_minus_affine.dot(LPI_to_RSA_affine)
+        affine = LPI_to_RSA_affine.dot(self._LPI_minus_affine)
         return self._reslice(self.image_array, affine)
 
-    def to_SLA_minus(self):
-        pass
+    def to_ASR_minus(self):
+        LPI_to_ASR_affine = np.array([[0, -1, 0, 0],
+                                      [0, 0, -1, 0],
+                                      [-1, 0, 0, 0],
+                                      [0, 0, 0, 1]])
+        affine = LPI_to_ASR_affine.dot(self._LPI_minus_affine)
+        return self._reslice(self.image_array, affine)
 
     def to_axial(self):
         return self.to_RAI_minus()
@@ -46,7 +51,7 @@ class Reslicer:
         return self.to_RSA_minus()
 
     def to_sagittal(self):
-        return self.to_SLA_minus()
+        return self.to_ASR_minus()
 
     def _reslice(self, image, affine):
         result_range = self._calc_scanner_coords_range(image.shape, affine)
@@ -75,8 +80,6 @@ class Reslicer:
         mesh = np.meshgrid(*[np.arange(dim) for dim in target_shape])
         target_coords = self._stack_coords(mesh)
         source_coords = affine_t2s.dot(target_coords.T)
-        print(target_range)
-        print(np.min(source_coords, axis=1), np.max(source_coords, axis=1))
         target_tmp = map_coordinates(source_image, source_coords[:3, :])
         target_image = np.reshape(target_tmp, mesh[0].shape)
         return target_image
