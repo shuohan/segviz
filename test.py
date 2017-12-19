@@ -18,9 +18,19 @@ def load_image(image_path):
 def rescale_image(image, min_val, max_val):
     # image, min_val, max_val in uint8
     # a x old_val + b = new_val
+    image = image.astype(float)
+    image = np.abs(image) 
+    image = image / np.max(image) * MAX_VAL
+    print(np.max(image))
     b = min_val
     a = float(max_val - min_val) / MAX_VAL
-    image = (a * image + b).astype(np.uint8)
+    print(min_val, max_val, a, b)
+    image = a * image + b
+    print(np.max(image))
+    image[image>MAX_VAL]=MAX_VAL
+    image[image<0]=0
+    image = image.astype(np.uint8)
+    print(np.max(image))
     return image
 
 def load_labels(labels_path):
@@ -206,9 +216,9 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--sliceid', help='slice no.', default=None,
                         type=int, required=False, nargs='+')
     parser.add_argument('-min', help='min cutoff value of image, in uint8',
-                        type=np.uint8, default=0, required=False)
+                        type=int, default=0, required=False)
     parser.add_argument('-max', help='max cutoff value of image, in uint8',
-                        type=np.uint8, default=MAX_VAL, required=False)
+                        type=int, default=MAX_VAL, required=False)
     parser.add_argument('-r', '--convert_colors', action='store_true',
                         help='by default, the value of a label is directly the '
                              'index of a color; in case the colors is only '
@@ -225,6 +235,8 @@ if __name__ == '__main__':
                         default=None)
     parser.add_argument('-ori', '--orientation', required=False, default=None)
     args = parser.parse_args()
+
+    print(args)
 
     print(args.output_filename)
 
