@@ -29,8 +29,6 @@ coords = np.hstack((xcoords, ycoords, zcoords, np.ones(xcoords.shape))).T
 physical_coords = affine.dot(coords)
 min_physical_coords = np.min(physical_coords, axis=1)
 max_physical_coords = np.max(physical_coords, axis=1)
-print(min_physical_coords)
-print(max_physical_coords)
 offset = np.hstack((np.vstack((np.eye(3), np.zeros((1, 3)))),
                     min_physical_coords[..., None]))
 
@@ -44,33 +42,10 @@ zcoords = zmesh.flatten()[..., None]
 coords = np.hstack((xcoords, ycoords, zcoords, np.ones(xcoords.shape))).T
 vox_coords = inv_affine.dot(coords)
 
-# transformed_data_1 = np.reshape(interp(vox_coords[:3, :].T), xmesh.shape)
-# print(transformed_data_1.shape)
-# 
-# NOTE: can't get affine_transform to work; but RegularGridInterpolator is 
-# surprisingly slow
-
 transformed_data_2 = np.reshape(map_coordinates(data, vox_coords[:3, :]),
                                 xmesh.shape)
-print(transformed_data_2.shape)
 
-mat, vec = nib.affines.to_matvec(npl.inv(inv_affine).dot(np.array([[0, 1, 0, 0],
-                                                                  [1, 0, 0, 0],
-                                                                  [0, 0, 1, 0],
-                                                                  [0, 0, 0, 1]])))
-transformed_data_3 = affine_transform(data, mat, vec)
-print(transformed_data_3.shape)
-
-sliceid = 100
 import matplotlib.pyplot as plt
 plt.figure()
-plt.imshow(data[:, :, sliceid].T, cmap='gray')
-# plt.imshow(transformed_data_1[:, :, sliceid].T, cmap='gray')
-plt.figure()
-plt.imshow(transformed_data_2[:, :, sliceid], cmap='gray')
-plt.figure()
-plt.imshow(transformed_data_3[:, :, sliceid], cmap='gray')
-# for i in range(0, 260, 10):
-#     plt.figure()
-#     plt.imshow(transformed_data_2[:, :, i], cmap='gray')
-#     plt.title(str(i))
+plt.imshow(transformed_data_2[:, :, 100], cmap='gray')
+plt.show()
