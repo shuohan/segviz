@@ -70,7 +70,7 @@ class Reslicer:
     def _transform_image(self, source_image, target_range, affine_s2t):
         # center target_image_coords such that min_range -> [0, 0, 0]
         offset = self._convert_translation_to_homogeneous(target_range[0])
-        affine_t2s = np.linalg.inv(affine_s2t.dot(offset))
+        affine_t2s = np.linalg.inv(affine_s2t).dot(offset)
         target_shape = np.ceil(target_range[1]-target_range[0]+1).astype(int)
         mesh = np.meshgrid(*[np.arange(dim) for dim in target_shape])
         target_coords = self._stack_coords(mesh)

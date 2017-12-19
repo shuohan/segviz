@@ -13,8 +13,8 @@ data = obj.get_data()
 affine = obj.affine
 
 reslicer = Reslicer(data, affine)
-axial = reslicer.to_LPI_minus()
-# axial = reslicer.to_axial()
+# axial = reslicer.to_LPI_minus()
+axial = reslicer.to_axial()
 # coronal = reslicer.to_coronal()
 
 import matplotlib.pyplot as plt
