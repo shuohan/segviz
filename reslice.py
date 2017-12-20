@@ -45,6 +45,15 @@ class Reslicer:
         affine = LPI_to_ASR_affine.dot(self._LPI_minus_affine)
         return self._reslice(self.image_array, affine)
 
+    def to_view(self, view):
+        # view: 'axial', 'coronal', 'sagittal'
+        if view == 'axial':
+            return self.to_axial()
+        if view == 'coronal':
+            return self.to_coronal()
+        if view == 'sagittal':
+            return self.to_sagittal()
+
     def to_axial(self):
         return self.to_RAI_minus()
 
