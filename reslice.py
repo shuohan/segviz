@@ -4,7 +4,7 @@ from scipy.ndimage.interpolation import map_coordinates
 
 class Reslicer:
 
-    def __init__(self, image_array, LPI_minus_affine):
+    def __init__(self, image_array, LPI_minus_affine, order=1):
 
         # LPI_minus_affine: homogeneous affine matrix from voxel coordinates to
         # scanner coordinates; 4x4 matrix; x: left(-) -> right(+), y:
@@ -16,6 +16,7 @@ class Reslicer:
 
         self.image_array = image_array
         self._LPI_minus_affine = LPI_minus_affine
+        self.order = order
 
     def to_LPI_minus(self):
         return self._reslice(self.image_array, self._LPI_minus_affine)
@@ -80,7 +81,8 @@ class Reslicer:
         mesh = np.meshgrid(*[np.arange(dim) for dim in target_shape])
         target_coords = self._stack_coords(mesh)
         source_coords = affine_t2s.dot(target_coords.T)
-        target_tmp = map_coordinates(source_image, source_coords[:3, :])
+        target_tmp = map_coordinates(source_image, source_coords[:3, :],
+                                     order=self.order)
         target_image = np.reshape(target_tmp, mesh[0].shape)
         return target_image
 
