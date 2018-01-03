@@ -21,34 +21,11 @@ def load_labels(labels_path):
     labels = np.round(labels).astype(np.int32)
     return labels
 
-def load_colors(colors_path):
-    # the first row is the background color
-    if not os.path.isfile(colors_path):
-        print('File', colors_path, 'does not exist. Using default colormap')
-        colors = get_default_colormap()
-    else: 
-        colors = np.load(colors_path)
-        colors = (MAX_VAL * colors).astype(np.uint8)
-    if colors.shape[1] < 4: # no alpha channel
-        alphas = MAX_VAL * np.ones((colors.shape[0], 1), dtype=np.uint8)
-        colors = np.hstack([colors, alphas])
-    colors[0, 3] = 0 # background alpha is 0
-    return colors
-
 def get_default_colormap():
     colors = np.empty((len(ImageColor.colormap), 3), dtype=np.uint8)
     for i, (k, v) in enumerate(sorted(ImageColor.colormap.items())):
         colors[i, :] = ImageColor.getrgb(v)
     return colors
-
-def convert_colors(colors, labels):
-    label_set = np.unique(labels)
-    new_colors_shape = (np.max(label_set)+1, colors.shape[1])
-    new_colors = np.empty(new_colors_shape, dtype=np.uint8)
-    indices = np.mod(np.arange(len(label_set), dtype=int), colors.shape[0])
-    new_colors[label_set, :] = colors[indices, :]
-    return new_colors
-
 
 class Overlay:
 
@@ -154,7 +131,6 @@ class Overlay:
         image_slice = np.repeat(image_slice[:, :, None], 3, 2)
         image_pil = Image.fromarray(image_slice).convert('RGBA')
         return image_pil
-
 
 def concatenate_pils(all_pils):
     total_widths = list()

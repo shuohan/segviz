@@ -6,7 +6,6 @@
 import os
 import numpy as np
 
-MAX_UINT8 = 255
 
 def load_colors(colors_path):
     """Load colors from a file
@@ -16,9 +15,7 @@ def load_colors(colors_path):
     Args:
         colors_path (str): The path to the .npy file (.npy, .txt). The colors in
             the file should be a num_colors x 3 (rgb) or a num_colors x 4 (rgba)
-            array. The values are in [0, 1]. The first color (the first row) is
-            alwasy assumed to be background so the alpha value of this row will
-            be set to 0
+            array. The values are in [0, 1].
 
     Returns:
         colors (num_colors x 4 (rgba) numpy array): The loaded colors
@@ -42,14 +39,9 @@ def load_colors(colors_path):
     else:
         raise IOError("The extesion of %s is not supported" % colors_path)
 
-    if colors.shape[1] == 3: # no alpha channel
-        alphas = MAX_UINT8 * np.ones((colors.shape[0], 1), dtype=np.uint8)
-        colors = np.hstack([colors, alphas])
-    if colors.shape[1] != 4:
+    if colors.shape[1] != 3 or colors.shape[1] != 4:
         raise RuntimeError('The shape of the colors array should be num_colors '
                            'x 3 or num_colors x 4 by a shape', colors.shape, 
                            'is presented')
-
-    colors[0, 3] = 0 # background alpha is 0
 
     return colors
