@@ -3,8 +3,7 @@
 """Utilities for simple image processing
 
 """
-
-import numpy
+import numpy as np
 
 def rescale_image_to_uint8(image, min_val, max_val):
     """Rescale image to the specified uint8 range
