@@ -15,24 +15,6 @@ def load_image(image_path):
     image = (image / np.max(image) * MAX_VAL).astype(np.uint8)
     return image
 
-def rescale_image(image, min_val, max_val):
-    # image, min_val, max_val in uint8
-    # a x old_val + b = new_val
-    image = image.astype(float)
-    image = np.abs(image) 
-    image = image / np.max(image) * MAX_VAL
-    print(np.max(image))
-    b = min_val
-    a = float(max_val - min_val) / MAX_VAL
-    print(min_val, max_val, a, b)
-    image = a * image + b
-    print(np.max(image))
-    image[image>MAX_VAL]=MAX_VAL
-    image[image<0]=0
-    image = image.astype(np.uint8)
-    print(np.max(image))
-    return image
-
 def load_labels(labels_path):
     labels = nib.load(labels_path).get_data()
     labels = np.swapaxes(labels, 0, 1)
