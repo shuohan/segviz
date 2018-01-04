@@ -4,6 +4,8 @@
 
 """
 import numpy as np
+from PIL import Image
+
 
 def rescale_image_to_uint8(image, min_val, max_val):
     """Rescale image to the specified uint8 range
@@ -47,3 +49,71 @@ def rescale_image_to_uint8(image, min_val, max_val):
     rescaled_image = rescaled_image.astype(np.uint8)
 
     return rescaled_image
+
+
+def assign_colors_to_label_image(label_image, colors):
+    """Assign colors to a label image
+
+    The values of `label_image` are corresponding to the row indices of the
+    array colors. The 0 values of `label_image` is assumed to be background so
+    the first row of `colors` has 0 alpha.  
+
+    Args:
+        label_image (int numpy array): Can be 3D or 2D.
+        colors (num_colors x 4 (rgba) numpy array): The colors array. The number
+            of colors should be greater than the maximal label value. The first
+            colors is assumed to be background and the alphs is set to zero.
+
+    Returns:
+        colorful_label_image (uint8 numpy array): The last dimension is rgba.
+
+    Raises:
+        RuntimeError: If the shape of the colors is not num_colors x 4 (rgba)
+
+    """
+    if colors.shape[0] != 4:
+        raise RuntimeError('The shape of the colors should be num_colors x 4 '
+                           '(rgba). Instead, shape', colors.shape, 'is used.')
+    colors[0, 3] = 0 # background alpha
+    colorful_label_image = colors[label_image, :]
+    return colorful_label_image
+
+
+def compose_image_and_labels(image, label_image, alpha):
+    """Compose image and a label image
+    
+    Alpha composition of `image` and the corresponding `label_image`
+    (segmentation or parcellation). `label_image` is a rgba array and `image`
+    will be rendered as a grayscale image. `alpha` will be applied to
+    `label_image`.
+
+    Args:
+        image (dim1 x dim2 unit8 numpy image)
+        label_image (dim1 x dim2 x 4 (rgba) unit8 numpy image)
+        alpha (float): The alpha value of labels. Should be in [0, 1] and the
+        function will scale it to [0, 255].
+
+    Returns:
+        composited_image (2D PIL image)
+
+    """
+    label_image[:, :, 3] = label_image[:, :, 3] * alpha
+    image_pil = convert_grayscale_image_to_pil(image)
+    label_image_pil = Image.fromarray(label_image).convert('RGBA')
+    overlay_pil = Image.alpha_composite(image_pil, label_image_pil)
+    return overlay_pil
+
+
+def convert_grayscale_image_to_pil(image):
+    """Convert a 2D grayscale image to PIL image
+
+    Args:
+        image (dim1 x dim2 uint8 numpy array):
+
+    Returns:
+        image_pil (2D PIL image)
+
+    """
+    image = np.repeat(image[:, :, None], 3, 2)
+    image_pil = Image.fromarray(image).convert('RGBA')
+    return image_pil

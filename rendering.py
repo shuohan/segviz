@@ -53,8 +53,13 @@ def add_alpha_column(colors):
     Returns:
         colors (num_colors x 4 (rgba) uint8 numpy array)
 
+    Raises:
+        RuntimeError: The array is not num_colors x 3.
+
     """
-    if colors.shape[1] == 3:
-        alphas = MAX_UINT8 * np.ones((colors.shape[0], 1), dtype=np.uint8)
-        colors = np.hstack([colors, alphas])
+    if colors.shape[1] != 3:
+        raise RuntimeError('The colors should be num_colors x 3 (rgb) array. '
+                           'Instead, a shape', colors.shape, 'is used.')
+    alphas = MAX_UINT8 * np.ones((colors.shape[0], 1), dtype=np.uint8)
+    colors = np.hstack([colors, alphas])
     return colors
