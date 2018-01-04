@@ -131,7 +131,7 @@ class ImageRenderer:
         """
         image_nib = nib.load(image_path)
         self._image = image_nib.get_data()
-        self._image = rescale_image_to_uint8(self._image)
+        self._image = self.rescale_image(self._image, 0, 1)
         self._image_affine = image_nib.affine
 
         label_image_nib = nib.load(label_image_path)
@@ -147,7 +147,15 @@ class ImageRenderer:
         self._sagittal_label_image = None
 
     def rescale_image(self, min_val, max_val):
-        # [0, 255]
+        """Rescale image intensity to [min_val, max_val]
+
+        Other details see function rescale_image_to_uint8
+
+        Args:
+            min_val (float >= 0): The lower limit of the intensity
+            max_val (float <= 1): The upper limit of the intensity
+
+        """
         self._image = rescale_image_to_uint8(self._image, min_val, max_val)
         for orient in ('axial', 'coronal', 'sagittal'):
             image_along_orient = getattr(self, '_%s_image' % orient)
@@ -163,6 +171,10 @@ class ImageRenderer:
             orient (str): {'axial', 'coronal', 'sagittal'}
             slice_id (int)
             alpha (float): [0, 1]
+
+        Returns:
+            composite_slice (PIL image): alpha-composite 2D image slice
+
         """
         image_along_orient = getattr(self, '_%s_image' % orient)
         label_image_along_orient = getattr(self, '_%s_label_image' % orient)
@@ -188,6 +200,12 @@ class ImageRenderer:
     def _trim_slice_id(self, slice_id):
         """Trim the slice_id to [0, max_num_slices]
 
+        Args:
+            slice_id (int): The index of the slice to show
+
+        Returns:
+            slice_id (int): Trimed index
+            
         """
         max_num_slices = self._image_nib.shape[2]
         if slice_id < 0:
