@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 
 
-def rescale_image_to_uint8(image, min_val, max_val):
+def rescale_image_to_uint8(image, min_val=MIN_UINT8, max_val=MAX_UINT8):
     """Rescale image to the specified uint8 range
 
     Linearly rescale an image to the range [min_val, max_val]. This range should

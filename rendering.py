@@ -3,8 +3,11 @@
 """Functions about rendering
 
 """
+import nibabel as nib
 import numpy as np
 from PIL import Image, ImageColor
+
+from nibabel_affine.reslice import Reslicer
 
 MAX_UINT8 = 255
 
@@ -103,3 +106,92 @@ def concatenate_pils(images):
         h_offset += h
 
     return result
+
+
+class ImageRenderer:
+
+    """ Render image and its corresponding label_image.
+
+    This class takes an 3D image and its label image as inputs. By setting alpha
+    and slice index, it can output a alpha-composed 2D slice. This class can
+    also handle orientation.
+
+    Args: 
+
+    """
+    def __init__(self, image_path, label_image_path, colors):
+        """
+        Args:
+            image_path (str): the path to the image
+            label_image_path (str): the path to the corresponding label image
+            colors (num_colors x 4 (rbga) numpy array): num_colors should be
+                larger than or equal to the maxmimal label value
+                row is assumed to be background so the alpha should be 0
+
+        """
+        image_nib = nib.load(image_path)
+        self._image = image_nib.get_data()
+        self._image = rescale_image_to_uint8(self._image)
+        self._image_affine = image_nib.affine
+
+        label_image_nib = nib.load(label_image_path)
+        self._label_image = label_image_nib.get_data().astype(int)
+        colors = convert_colors(colors, np.unique(self._label_image))
+        self._label_image = assign_colors_to_label_image(self._label_image,
+                                                         colors)
+        self._axial_image = None
+        self._axial_label_image = None
+        self._coronal_image = None
+        self._coronal_label_image = None
+        self._sagittal_image = None
+        self._sagittal_label_image = None
+
+    def rescale_image(self, min_val, max_val):
+        # [0, 255]
+        self._image = rescale_image_to_uint8(self._image, min_val, max_val)
+        for orient in ('axial', 'coronal', 'sagittal'):
+            image_along_orient = getattr(self, '_%s_image' % orient)
+            if image_along_orient is not None:
+                image_along_orient = rescale_image_to_uint8(image_along_orient,
+                                                            min_val, max_val)
+                setattr(self, '_%s_image' % orient, image_along_orient)
+
+    def get_slice(self, orient, slice_id, alpha):
+        """ Get a alpha-composition of a slice at an orientation
+
+        Args:
+            orient (str): {'axial', 'coronal', 'sagittal'}
+            slice_id (int)
+            alpha (float): [0, 1]
+        """
+        image_along_orient = getattr(self, '_%s_image' % orient)
+        label_image_along_orient = getattr(self, '_%s_label_image' % orient)
+        if image_along_orient is None or label_image_along_orient is None:
+            image_reslicer = Reslicer(self._image_data, self._image_affine,
+                                      order=1)
+            label_image_reslicer = Reslicer(self._label_image_data,
+                                            self._image_affine, order=0)
+            transformed_image = getattr(image_reslicer, 'to_%s' % orient)
+            transformed_label_image = getattr(label_image_reslicer,
+                                              'to_%s' % orient)
+            setattr(self, '_%s_image' % orient, transformed_image)
+            setattr(self, '_%s_label_image' % orient, transformed_label_image)
+
+        slice_id = self._trim_slice_id(slice_id)
+        image_slice = image_along_orient[:, :, slice_id]
+        label_image_slice = label_image_along_orient[:, :, slice_id, :]
+        label_image_slice = np.squeeze(label_image_slice)
+        composite_slice = compose_image_and_labels(image_slice,
+                                                   label_image_slice, alpha)
+        return composite_slice
+
+    def _trim_slice_id(self, slice_id):
+        """Trim the slice_id to [0, max_num_slices]
+
+        """
+        max_num_slices = self._image_nib.shape[2]
+        if slice_id < 0:
+            slice_id = 0
+        elif slice_id >= max_num_slices:
+            slice_id = max_num_slices - 1
+        return slice_id
