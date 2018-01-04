@@ -5,7 +5,6 @@ import os
 import argparse
 import numpy as np
 import nibabel as nib
-from PIL import Image, ImageColor
 
 MAX_VAL = 255
 
@@ -20,12 +19,6 @@ def load_labels(labels_path):
     labels = np.swapaxes(labels, 0, 1)
     labels = np.round(labels).astype(np.int32)
     return labels
-
-def get_default_colormap():
-    colors = np.empty((len(ImageColor.colormap), 3), dtype=np.uint8)
-    for i, (k, v) in enumerate(sorted(ImageColor.colormap.items())):
-        colors[i, :] = ImageColor.getrgb(v)
-    return colors
 
 class Overlay:
 
@@ -119,38 +112,11 @@ class Overlay:
         print('slice: %d; alpha: %.2f' % (self._sliceid, self._alpha), end='\r')
 
     def _compose(self):
-        image_pil = self._create_image_pil()
-        labels_slice = self._colors[self._labels[:, :, self._sliceid], :]
-        labels_slice[:, :, 3] = labels_slice[:, :, 3] * self._alpha
-        labels_pil = Image.fromarray(labels_slice).convert('RGBA')
-        overlay_pil = Image.alpha_composite(image_pil, labels_pil)
-        return overlay_pil
+        pass
 
     def _create_image_pil(self):
-        image_slice = self._image[:, :, self._sliceid]
-        image_slice = np.repeat(image_slice[:, :, None], 3, 2)
-        image_pil = Image.fromarray(image_slice).convert('RGBA')
-        return image_pil
+        pass
 
-def concatenate_pils(all_pils):
-    total_widths = list()
-    max_heights = list()
-    for pils in all_pils:
-        widths, heights = zip(*[pil.size for pil in pils])
-        total_widths.append(sum(widths))
-        max_heights.append(max(heights))
-    result = Image.new('RGBA', (max(total_widths), sum(max_heights)))
-    x_offset = 0
-    y_offset = 0
-    for pils, h in zip(all_pils, max_heights):
-        for pil in pils:
-            size = pil.size
-            print(pil, size, x_offset, y_offset)
-            result.paste(pil, (x_offset, y_offset))
-            x_offset += size[0]
-        x_offset = 0
-        y_offset += h
-    return result
 
 
 if __name__ == '__main__':

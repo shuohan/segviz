@@ -94,14 +94,14 @@ def compose_image_and_labels(image, label_image, alpha):
         function will scale it to [0, 255].
 
     Returns:
-        composited_image (2D PIL image)
+        composite_image (2D PIL image)
 
     """
     label_image[:, :, 3] = label_image[:, :, 3] * alpha
     image_pil = convert_grayscale_image_to_pil(image)
     label_image_pil = Image.fromarray(label_image).convert('RGBA')
-    overlay_pil = Image.alpha_composite(image_pil, label_image_pil)
-    return overlay_pil
+    composite_image = Image.alpha_composite(image_pil, label_image_pil)
+    return composite_image
 
 
 def convert_grayscale_image_to_pil(image):

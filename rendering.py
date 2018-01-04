@@ -63,3 +63,43 @@ def add_alpha_column(colors):
     alphas = MAX_UINT8 * np.ones((colors.shape[0], 1), dtype=np.uint8)
     colors = np.hstack([colors, alphas])
     return colors
+
+
+def concatenate_pils(images):
+    """Concatenate images to a grid
+
+    Args:
+        images (nested list of PIL images): [[im1, im2, im3], [im4, im5, im6]]
+            will be converted to a 2 x 3 concatenated picture
+
+    Returns:
+        result (2D PIL image)
+
+    """
+    widths = list()
+    heights = list()
+    for image_row in images:
+        ws, hs = zip(*[image.size for image in image_row])
+        widths.append(ws)
+        heights.append(heights)
+    widths = np.array(widths)
+    heights = np.array(heights)
+
+    # the height per row is determined by the max height of this row
+    # the width per column is determined by the max width of this column
+    max_widths_per_column = np.max(widths, axis=0)
+    max_heights_per_row = np.max(heights, axis=1)
+    width = np.sum(max_widths_per_column)
+    height = np.sum(max_heights_per_row)
+    result = Image.new('RGBA', (width, height))
+
+    w_offset = 0
+    h_offset = 0
+    for image_row, h in zip(all_pils, max_heights_per_row):
+        for image, w in zip(image_row, max_widths_per_column):
+            result.paste(image, (w_offset, h_offset))
+            w_offset += w
+        w_offset = 0
+        h_offset += h
+
+    return result
