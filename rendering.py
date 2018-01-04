@@ -119,7 +119,8 @@ class ImageRenderer:
     Args: 
 
     """
-    def __init__(self, image_path, label_image_path, colors):
+    def __init__(self, image_path, label_image_path, colors,
+                 convert_colors=False):
         """
         Args:
             image_path (str): the path to the image
@@ -127,6 +128,13 @@ class ImageRenderer:
             colors (num_colors x 4 (rbga) numpy array): num_colors should be
                 larger than or equal to the maxmimal label value
                 row is assumed to be background so the alpha should be 0
+            convert_colors (bool): By default, the value of a label is directly
+                the index of a color; in case the colors is only stored in the
+                order of the ascent of the label values (for example, labels are
+                2, 5, 10, but there are only three colors, we need to convert 2,
+                5, 10 to 0, 1, 2), use this option to convert the colors array
+                so that (2, 5, 10) rows of the new array has the (0, 1, 2) rows
+                of the original colors
 
         """
         image_nib = nib.load(image_path)
