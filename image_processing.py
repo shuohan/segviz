@@ -7,6 +7,9 @@ import numpy as np
 from PIL import Image
 
 
+MIN_UINT8 = 0
+MAX_UINT8 = 255
+
 def rescale_image_to_uint8(image, min_val=MIN_UINT8, max_val=MAX_UINT8):
     """Rescale image to the specified uint8 range
 
@@ -71,9 +74,10 @@ def assign_colors_to_label_image(label_image, colors):
         RuntimeError: If the shape of the colors is not num_colors x 4 (rgba)
 
     """
-    if colors.shape[0] != 4:
+    if colors.shape[1] != 4:
+        color_shape = ' x '.join([str(s)for s in colors.shape])
         raise RuntimeError('The shape of the colors should be num_colors x 4 '
-                           '(rgba). Instead, shape', colors.shape, 'is used.')
+                           '(rgba). Instead, shape %s is used.' % color_shape)
     colors[0, 3] = 0 # background alpha
     colorful_label_image = colors[label_image, :]
     return colorful_label_image

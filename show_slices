@@ -3,8 +3,9 @@
 
 import argparse
 import os
+import sys
 
-from io import load_colors
+from file_loading import load_colors
 from rendering import ImageRenderer, concatenate_pils, get_default_colormap
 
 from PIL import Image
@@ -16,7 +17,7 @@ if __name__ == '__main__':
                    'placed in a grid. Each row contains multiple slices of a '
                    'single image along a specific orientation. For an image, '
                    'axial, coronal, sagittal slices will be placed in '
-                   'consecutive rows. Slices will be displayed in ascent.'
+                   'consecutive rows. Slices will be displayed in ascent.')
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-p', '--input-pair', nargs='+', required=True,
                         metavar=('IMAGE', 'LABEL_VOLUME'), action='append',
@@ -34,13 +35,13 @@ if __name__ == '__main__':
                              'colormap will be used.')
     parser.add_argument('-a', '--alpha', help='transparency of the label image',
                         default=0.5, required=False, type=float)
-    parser.add_argument('-as', '--axial-slices', default=None, type=int, 
+    parser.add_argument('-as', '--axial-slices', default=[], type=int, 
                         help='indices of axial slices to show', required=False,
                         nargs='+')
-    parser.add_argument('-cs', '--coronal-slices', default=None, type=int, 
+    parser.add_argument('-cs', '--coronal-slices', default=[], type=int, 
                         help='indices of coronal slices to show', required=False,
                         nargs='+')
-    parser.add_argument('-ss', '--sagittal-slices', default=None, type=int, 
+    parser.add_argument('-ss', '--sagittal-slices', default=[], type=int, 
                         help='indices of sagittal slices to show',
                         required=False, nargs='+')
     parser.add_argument('-s', '--max-num-slices-in-row', default=0, type=int,
@@ -50,7 +51,7 @@ if __name__ == '__main__':
                              '`mod(num_slices, max_num_slices_in_row) + 1` '
                              'blocks will be displaced. TODO')
     parser.add_argument('-min', '--min', type=int, default=0, required=False,
-                        help='min cutoff value of image, a value in [0, 1]' '
+                        help='min cutoff value of image, a value in [0, 1]; '
                              'if the value is less than 0, the intensity of an '
                              'image is first scaled to this minimal value and '
                              'new values less than 0 will be set to zero.')
@@ -75,25 +76,34 @@ if __name__ == '__main__':
                              'instead of stored.', default=None)
     args = parser.parse_args()
 
+    if args.colors is None:
+        colors = get_default_colormap()
+        print('--colors is not specified. Use default colormap instead.')
+    else:
+        colors = load_colors(args.colors)
+
     slice_indices = dict(axial=args.axial_slices, coronal=args.coronal_slices,
                          sagittal=args.sagittal_slices)
     num_columns = max([len(slices) for slices in (args.axial_slices,
                                                   args.coronal_slices,
                                                   args.sagittal_slices)])
     # construct grid 
-    colors = load_colors(args.colors)
     slices = list()
     for image, label_image in args.input_pair:
         ir = ImageRenderer(image, label_image, colors, args.convert_colors)
         ir.rescale_image(args.min, args.max)
         row = list()
-        for orient in sorted(slice_indices.keys):
+        for orient in sorted(slice_indices.keys()):
             for si in slice_indices[orient]:
                 row.append(ir.get_slice(orient, si, args.alpha))
             for i in range(num_columns - len(slice_indices[orient])):
-                row.append(Image.fromarray(np.empty((0, 0))))
+                row.append(Image.new('RGBA', (0, 0)))
         slices.append(row)
     grid = concatenate_pils(slices)
+    if grid.size == (0, 0):
+        print('No slices will be showed. Use --axial-slices --coronal-slices '
+              '--sagittal-slices to specify which slices to show')
+        sys.exit(1)
 
     if args.output_filename is None:
         grid.show()

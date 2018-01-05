@@ -8,7 +8,10 @@ import numpy as np
 from PIL import Image, ImageColor
 
 from nibabel_affine.reslice import Reslicer
+from image_processing import rescale_image_to_uint8
+from image_processing import assign_colors_to_label_image
 
+MIN_UINT8 = 0
 MAX_UINT8 = 255
 
 def convert_colors(colors, labels):
@@ -61,8 +64,9 @@ def add_alpha_column(colors):
 
     """
     if colors.shape[1] != 3:
+        color_shape = ' x '.join([str(s)for s in colors.shape])
         raise RuntimeError('The colors should be num_colors x 3 (rgb) array. '
-                           'Instead, a shape', colors.shape, 'is used.')
+                           'Instead, a shape %s is used.' % color_shape)
     alphas = MAX_UINT8 * np.ones((colors.shape[0], 1), dtype=np.uint8)
     colors = np.hstack([colors, alphas])
     return colors
@@ -82,11 +86,15 @@ def concatenate_pils(images):
     widths = list()
     heights = list()
     for image_row in images:
-        ws, hs = zip(*[image.size for image in image_row])
-        widths.append(ws)
-        heights.append(heights)
-    widths = np.array(widths)
-    heights = np.array(heights)
+        size = list(zip(*[image.size for image in image_row]))
+        if len(size) == 2:
+            widths.append(ws)
+            heights.append(hs)
+    if len(widths) == 0 or len(heights) == 0:
+        return Image.new('RGB', (0, 0))
+    else:
+        widths = np.array(widths)
+        heights = np.array(heights)
 
     # the height per row is determined by the max height of this row
     # the width per column is determined by the max width of this column
@@ -120,7 +128,7 @@ class ImageRenderer:
 
     """
     def __init__(self, image_path, label_image_path, colors,
-                 convert_colors=False):
+                 need_to_convert_colors=False):
         """
         Args:
             image_path (str): the path to the image
@@ -128,23 +136,30 @@ class ImageRenderer:
             colors (num_colors x 4 (rbga) numpy array): num_colors should be
                 larger than or equal to the maxmimal label value
                 row is assumed to be background so the alpha should be 0
-            convert_colors (bool): By default, the value of a label is directly
-                the index of a color; in case the colors is only stored in the
-                order of the ascent of the label values (for example, labels are
-                2, 5, 10, but there are only three colors, we need to convert 2,
-                5, 10 to 0, 1, 2), use this option to convert the colors array
-                so that (2, 5, 10) rows of the new array has the (0, 1, 2) rows
-                of the original colors
+            need_to_convert_colors (bool): By default, the value of a label is
+                directly the index of a color; in case the colors is only stored
+                in the order of the ascent of the label values (for example,
+                labels are 2, 5, 10, but there are only three colors, we need to
+                convert 2, 5, 10 to 0, 1, 2), use this option to convert the
+                colors array so that (2, 5, 10) rows of the new array has the
+                (0, 1, 2) rows of the original colors
 
         """
         image_nib = nib.load(image_path)
         self._image = image_nib.get_data()
-        self._image = self.rescale_image(self._image, 0, 1)
         self._image_affine = image_nib.affine
 
         label_image_nib = nib.load(label_image_path)
         self._label_image = label_image_nib.get_data().astype(int)
-        colors = convert_colors(colors, np.unique(self._label_image))
+        if need_to_convert_colors:
+            colors = convert_colors(colors, np.unique(self._label_image))
+        if colors.shape[1] == 3:
+            colors = add_alpha_column(colors)
+        elif colors.shape[1] != 4:
+            color_shape = ' x '.join([str(s)for s in colors.shape])
+            raise RuntimeError('The colors should be num_colors x 3 (rgb) or '
+                               'num_colors x 4 (rgba) array. Instead, a shape '
+                               '%s is used.' % color_shape)
         self._label_image = assign_colors_to_label_image(self._label_image,
                                                          colors)
         self._axial_image = None
@@ -153,6 +168,8 @@ class ImageRenderer:
         self._coronal_label_image = None
         self._sagittal_image = None
         self._sagittal_label_image = None
+
+        self.rescale_image(0, 1)
 
     def rescale_image(self, min_val, max_val):
         """Rescale image intensity to [min_val, max_val]
