@@ -92,13 +92,13 @@ if __name__ == '__main__':
     for image, label_image in args.input_pair:
         ir = ImageRenderer(image, label_image, colors, args.convert_colors)
         ir.rescale_image(args.min, args.max)
-        row = list()
         for orient in sorted(slice_indices.keys()):
+            row = list()
             for si in slice_indices[orient]:
                 row.append(ir.get_slice(orient, si, args.alpha))
             for i in range(num_columns - len(slice_indices[orient])):
                 row.append(Image.new('RGBA', (0, 0)))
-        slices.append(row)
+            slices.append(row)
     grid = concatenate_pils(slices)
     if grid.size == (0, 0):
         print('No slices will be showed. Use --axial-slices --coronal-slices '
