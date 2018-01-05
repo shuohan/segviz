@@ -101,6 +101,7 @@ def compose_image_and_labels(image, label_image, alpha):
         composite_image (2D PIL image)
 
     """
+    label_image = np.copy(label_image)
     label_image[:, :, 3] = label_image[:, :, 3] * alpha
     image_pil = convert_grayscale_image_to_pil(image)
     label_image_pil = Image.fromarray(label_image).convert('RGBA')
