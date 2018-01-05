@@ -6,6 +6,7 @@
 import os
 import numpy as np
 
+MAX_UINT8 = 255
 
 def load_colors(colors_path):
     """Load colors from a file
@@ -31,17 +32,18 @@ def load_colors(colors_path):
     """
     if not os.path.isfile(colors_path):
         raise IOError('The file %s does not exists' % colors_path)
-    elif colors.path.endswith('.npy'): 
+    elif colors_path.endswith('.npy'): 
         colors = np.load(colors_path)
-        colors = (MAX_VAL * colors).astype(np.uint8)
+        colors = (MAX_UINT8 * colors).astype(np.uint8)
     elif colors.path.endswith('.txt'):
         pass
     else:
         raise IOError("The extesion of %s is not supported" % colors_path)
 
-    if colors.shape[1] != 3 or colors.shape[1] != 4:
+    if colors.shape[1] != 3 and colors.shape[1] != 4:
+        color_shape = ' x '.join([str(s)for s in colors.shape])
         raise RuntimeError('The shape of the colors array should be num_colors '
-                           'x 3 or num_colors x 4 by a shape', colors.shape, 
-                           'is presented')
+                           'x 3 or num_colors x 4 by a shape %s is presented.'
+                           % color_shape)
 
     return colors
