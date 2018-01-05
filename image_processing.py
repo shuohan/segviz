@@ -54,7 +54,7 @@ def rescale_image_to_uint8(image, min_val=MIN_UINT8, max_val=MAX_UINT8):
     return rescaled_image
 
 
-def assign_colors_to_label_image(label_image, colors):
+def assign_colors(label_image, colors):
     """Assign colors to a label image
 
     The values of `label_image` are corresponding to the row indices of the

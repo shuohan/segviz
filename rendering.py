@@ -8,8 +8,8 @@ import numpy as np
 from PIL import Image, ImageColor
 
 from nibabel_affine.reslice import Reslicer
-from image_processing import rescale_image_to_uint8
-from image_processing import assign_colors_to_label_image
+from image_processing import rescale_image_to_uint8, assign_colors
+from image_processing import compose_image_and_labels
 
 MIN_UINT8 = 0
 MAX_UINT8 = 255
@@ -88,8 +88,8 @@ def concatenate_pils(images):
     for image_row in images:
         size = list(zip(*[image.size for image in image_row]))
         if len(size) == 2:
-            widths.append(ws)
-            heights.append(hs)
+            widths.append(size[0])
+            heights.append(size[1])
     if len(widths) == 0 or len(heights) == 0:
         return Image.new('RGB', (0, 0))
     else:
@@ -106,7 +106,7 @@ def concatenate_pils(images):
 
     w_offset = 0
     h_offset = 0
-    for image_row, h in zip(all_pils, max_heights_per_row):
+    for image_row, h in zip(images, max_heights_per_row):
         for image, w in zip(image_row, max_widths_per_column):
             result.paste(image, (w_offset, h_offset))
             w_offset += w
@@ -160,8 +160,8 @@ class ImageRenderer:
             raise RuntimeError('The colors should be num_colors x 3 (rgb) or '
                                'num_colors x 4 (rgba) array. Instead, a shape '
                                '%s is used.' % color_shape)
-        self._label_image = assign_colors_to_label_image(self._label_image,
-                                                         colors)
+        self._colors = colors
+
         self._axial_image = None
         self._axial_label_image = None
         self._coronal_image = None
@@ -181,6 +181,8 @@ class ImageRenderer:
             max_val (float <= 1): The upper limit of the intensity
 
         """
+        min_val = min_val * MAX_UINT8
+        max_val = max_val * MAX_UINT8
         self._image = rescale_image_to_uint8(self._image, min_val, max_val)
         for orient in ('axial', 'coronal', 'sagittal'):
             image_along_orient = getattr(self, '_%s_image' % orient)
@@ -204,15 +206,16 @@ class ImageRenderer:
         image_along_orient = getattr(self, '_%s_image' % orient)
         label_image_along_orient = getattr(self, '_%s_label_image' % orient)
         if image_along_orient is None or label_image_along_orient is None:
-            image_reslicer = Reslicer(self._image_data, self._image_affine,
-                                      order=1)
-            label_image_reslicer = Reslicer(self._label_image_data,
+            image_reslicer = Reslicer(self._image, self._image_affine, order=1)
+            label_image_reslicer = Reslicer(self._label_image,
                                             self._image_affine, order=0)
-            transformed_image = getattr(image_reslicer, 'to_%s' % orient)
-            transformed_label_image = getattr(label_image_reslicer,
-                                              'to_%s' % orient)
-            setattr(self, '_%s_image' % orient, transformed_image)
-            setattr(self, '_%s_label_image' % orient, transformed_label_image)
+            image_along_orient = getattr(image_reslicer, 'to_%s' % orient)()
+            label_image_along_orient = getattr(label_image_reslicer,
+                                               'to_%s' % orient)()
+            label_image_along_orient = assign_colors(label_image_along_orient,
+                                                     self._colors)
+            setattr(self, '_%s_image' % orient, image_along_orient)
+            setattr(self, '_%s_label_image' % orient, label_image_along_orient)
 
         slice_id = self._trim_slice_id(slice_id)
         image_slice = image_along_orient[:, :, slice_id]
@@ -232,7 +235,7 @@ class ImageRenderer:
             slice_id (int): Trimed index
             
         """
-        max_num_slices = self._image_nib.shape[2]
+        max_num_slices = self._image.shape[2]
         if slice_id < 0:
             slice_id = 0
         elif slice_id >= max_num_slices:
