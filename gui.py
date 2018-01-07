@@ -71,6 +71,10 @@ class ImageWindow(QLabel):
             self.alpha -= 0.05
         elif e.key() == Qt.Key_Right:
             self.alpha += 0.05
+        elif e.key() == Qt.Key_Up:
+            self.slice_idx += 1
+        elif e.key() == Qt.Key_Down:
+            self.slice_idx -= 1
         
         self._update()
 
