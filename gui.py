@@ -34,11 +34,7 @@ class ImageWindow(QLabel):
         self.orient = orient
         self.slice_idx = initial_slice_idx
         self.alpha = initial_alpha
-
-        self._image_slice = self._image_renderer.get_slice(self.orient, 
-                                                           self.slice_idx,
-                                                           self.alpha)
-        self.setPixmap(QPixmap.fromImage(ImageQt(self._image_slice)))
+        self._update()
 
     @property
     def alpha(self):
@@ -63,6 +59,20 @@ class ImageWindow(QLabel):
             self._slice_idx = 0
         else:
             self._slice_idx = slice_idx
+
+    def _update(self):
+        self._image_slice = self._image_renderer.get_slice(self.orient, 
+                                                           self.slice_idx,
+                                                           self.alpha)
+        self.setPixmap(QPixmap.fromImage(ImageQt(self._image_slice)))
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Left:
+            self.alpha -= 0.05
+        elif e.key() == Qt.Key_Right:
+            self.alpha += 0.05
+        
+        self._update()
 
 if __name__ == '__main__':
     import sys
