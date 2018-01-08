@@ -35,6 +35,10 @@ class ImageWindow(QLabel):
         self.orient = orient
         self.slice_idx = initial_slice_idx
         self.alpha = initial_alpha
+        self._width_zoom = 1
+        self._height_zoom = 1
+        default_size = self._image_renderer.get_slice_size(self.orient)
+        self.default_width, self.default_height = default_size
         self._update()
 
     @property
@@ -82,10 +86,10 @@ class ImageWindow(QLabel):
             self._slice_idx = slice_idx
 
     def _update(self):
-        self._image_slice = self._image_renderer.get_slice(self.orient, 
-                                                           self.slice_idx,
-                                                           self.alpha)
-        self.setPixmap(QPixmap.fromImage(ImageQt(self._image_slice)))
+        image = self._image_renderer.get_slice(self.orient, self.slice_idx,
+                                               self.alpha, self._width_zoom,
+                                               self._height_zoom)
+        self.setPixmap(QPixmap.fromImage(ImageQt(image)))
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Left:
@@ -110,8 +114,13 @@ class ImageWindow(QLabel):
                 self.orient = 'sagittal'
             elif self.orient == 'sagittal':
                 self.orient = 'axial'
-        
         self._update()
+
+    def resizeEvent(self, e):
+        if hasattr(self, '_width_zoom') and hasattr(self, '_height_zoom'):
+            self._width_zoom = self.width() / self.default_width
+            self._height_zoom = self.height() / self.default_height
+            self._update()
 
 if __name__ == '__main__':
     import sys
