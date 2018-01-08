@@ -193,7 +193,12 @@ class ImageRenderer:
                                                          min_val, max_val)
 
     def initialize_oriented_images(self, orient):
+        """ Initialize images along an orientation
+        
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
 
+        """
         image_reslicer = Reslicer(self._image, self._image_affine, order=1)
         label_image_reslicer = Reslicer(self._label_image,
                                         self._image_affine, order=0)
@@ -203,6 +208,12 @@ class ImageRenderer:
                                                  'to_'+orient)()
 
     def assign_colors(self, orient):
+        """ Assign colors to label image along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
         self._oriented_images[orient]['colored_label_image'] = assign_colors(
             self._oriented_images[orient]['label_image'], self._colors)
 
