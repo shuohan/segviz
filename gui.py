@@ -23,19 +23,46 @@ class ImageWindow(QLabel):
         slice_idx (int): The index of the current showing slice
         orient (str): The orientation {'axial', 'coronal', 'sagittal'}
         alpha (float): The alpha value in [0, 1] of the label image
+        default_width (int): The original width of the image just initialization
+            of the window
+        default_height (int): The original height of the image just
+            initialization of the window
 
     """
 
     def __init__(self, image_path, label_image_path, colors,
-                 orient='axial', initial_slice_idx=None, initial_alpha=0.5):
+                 orient='axial', initial_slice_idx=None, initial_alpha=0.5,
+                 neep_to_convert_colors=True):
+        """
+        Args:
+            image_path (str): The path to the image to display
+            label_image_path (str): The path to the labels to display
+            colors (num_colors x 3 (rbg) or num_colors x 4 (rgba) numpy array):
+                The colors used to color the label image
+            orient (str, optional): Orientation to show; 'axial', 'coronal',
+                or 'sagittal'
+            initial_slice_idx (int, optional): The index of the inital slice to
+                show
+            initial_alpha (float, optional): The initial alpha of the labels
+            neep_to_convert_colors (bool): By default, the value of a label is
+                directly the index of a color; in case the colors is only stored
+                in the order of the ascent of the label values (for example,
+                labels are 2, 5, 10, but there are only three colors, we need to
+                convert 2, 5, 10 to 0, 1, 2), use this option to convert the
+                colors array so that (2, 5, 10) rows of the new array has the
+                (0, 1, 2) rows of the original colors
+
+        """
         super(ImageWindow, self).__init__()
         self._image_renderer = ImageRenderer(image_path, label_image_path,
                                              colors, 1)
+        # setting orient requires slice_idx but setting slice_idx also requires
+        # the orient
         self._slice_idx = None
         self.orient = orient
         self.slice_idx = initial_slice_idx
         self.alpha = initial_alpha
-        self._width_zoom = 1
+        self._width_zoom = 1 # for rescaling the image during window resizing
         self._height_zoom = 1
         default_size = self._image_renderer.get_slice_size(self.orient)
         self.default_width, self.default_height = default_size
@@ -86,12 +113,18 @@ class ImageWindow(QLabel):
             self._slice_idx = slice_idx
 
     def _update(self):
+        """Update the image within the window to show
+
+        """
         image = self._image_renderer.get_slice(self.orient, self.slice_idx,
                                                self.alpha, self._width_zoom,
                                                self._height_zoom)
         self.setPixmap(QPixmap.fromImage(ImageQt(image)))
 
     def keyPressEvent(self, e):
+        """The events when pressing a key
+
+        """
         if e.key() == Qt.Key_Left:
             self.alpha -= 0.05
         elif e.key() == Qt.Key_Right:
@@ -117,6 +150,9 @@ class ImageWindow(QLabel):
         self._update()
 
     def resizeEvent(self, e):
+        """The event when resizing a window
+
+        """
         if hasattr(self, '_width_zoom') and hasattr(self, '_height_zoom'):
             self._width_zoom = self.width() / self.default_width
             self._height_zoom = self.height() / self.default_height
