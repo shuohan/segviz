@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """Classes constructing the GUI
@@ -13,7 +12,6 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QFileDialog, QGridLayout,
 from PIL.ImageQt import ImageQt
 
 from rendering import ImageRenderer
-from file_loading import load_colors
 
 
 class ImageWindow(QLabel):
@@ -32,7 +30,7 @@ class ImageWindow(QLabel):
 
     def __init__(self, image_path, label_image_path, colors,
                  orient='axial', initial_slice_idx=None, initial_alpha=0.5,
-                 neep_to_convert_colors=True):
+                 need_to_convert_colors=True):
         """
         Args:
             image_path (str): The path to the image to display
@@ -44,7 +42,7 @@ class ImageWindow(QLabel):
             initial_slice_idx (int, optional): The index of the inital slice to
                 show
             initial_alpha (float, optional): The initial alpha of the labels
-            neep_to_convert_colors (bool): By default, the value of a label is
+            need_to_convert_colors (bool): By default, the value of a label is
                 directly the index of a color; in case the colors is only stored
                 in the order of the ascent of the label values (for example,
                 labels are 2, 5, 10, but there are only three colors, we need to
@@ -55,7 +53,7 @@ class ImageWindow(QLabel):
         """
         super(ImageWindow, self).__init__()
         self._image_renderer = ImageRenderer(image_path, label_image_path,
-                                             colors, 1)
+                                             colors, need_to_convert_colors)
         # setting orient requires slice_idx but setting slice_idx also requires
         # the orient
         self._slice_idx = None
@@ -157,12 +155,3 @@ class ImageWindow(QLabel):
             self._width_zoom = self.width() / self.default_width
             self._height_zoom = self.height() / self.default_height
             self._update()
-
-if __name__ == '__main__':
-    import sys
-    app = QApplication(sys.argv)
-    colors = load_colors('colors.npy')
-    window = ImageWindow('image.nii.gz', 'labels.nii.gz', colors,
-                         initial_slice_idx=10, orient='coronal')
-    window.show()
-    sys.exit(app.exec_())

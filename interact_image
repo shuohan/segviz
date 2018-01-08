@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+import sys
+from PyQt5.QtWidgets import QApplication
+
+from file_loading import load_colors
+from gui import ImageWindow
+from rendering import get_default_colormap
+
+if __name__ == '__main__':
+    description = ('interactively show slices of labels on top of image. Users '
+                   'can use up/down arrows to change the slices to show; '
+                   'left/right arrows to change the alpha of the labels; '
+                   'left/right square brackets to change orientations (axial, '
+                   'coronal, or sagittal). The image can also be resized by '
+                   'resizing the window.')
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-i', '--image', required=True,
+                        help='the path to the nii image to show')
+    parser.add_argument('-l', '--label-image', required=True,
+                        help='the path to the nii label image on top of the '
+                             'image')
+    parser.add_argument('-c', '--colors', default=None, required=False,
+                        help='a numpy file containing the colors of labels; '
+                             'the loaded colors should be a num_colors x 3 '
+                             'array whose columns are R, G, B; the order of '
+                             'the rows corresponds to the ascent of label '
+                             'values (check -r for more details; the first '
+                             'label value (normally 0) corresponds to the '
+                             'background whose color alpha will be set to 0 '
+                             'during visualization; if `None`, a default '
+                             'colormap will be used.')
+    parser.add_argument('-a', '--alpha', help='transparency of the label image',
+                        default=0.5, required=False, type=float)
+    parser.add_argument('-s', '--slice-idx', default=None, type=int, 
+                        help='intial slice to show', required=False)
+    parser.add_argument('-ori', '--orientation', required=False,
+                        choices=('axial', 'coronal', 'sagittal'),
+                        default='axial')
+    parser.add_argument('-min', '--min', type=int, default=0, required=False,
+                        help='min cutoff value of image, a value in [0, 1]; '
+                             'if the value is less than 0, the intensity of an '
+                             'image is first scaled to this minimal value and '
+                             'new values less than 0 will be set to zero.')
+    parser.add_argument('-max', '--max', type=int, default=1, required=False,
+                        help='max cutoff value of image, a value in [0, 1]; '
+                             'if the value is greater than 1, the intensity of '
+                             'an image is first scaled to this maximal value '
+                             'and new values greater than 1 will be set to 1.')
+    parser.add_argument('-r', '--convert_colors', action='store_true',
+                        help='by default, the value of a label is directly the '
+                             'index of a color; in case the colors is only '
+                             'stored in the order of the ascent of the label '
+                             'values (for example, labels are 2, 5, 10, but '
+                             'there are only three colors, we need to convert '
+                             '2, 5, 10 to 0, 1, 2), use this option to convert '
+                             'the colors array so that (2, 5, 10) rows of the '
+                             'new array has the (0, 1, 2) rows of the original '
+                             'colors.', default=False)
+    parser.add_argument('-o', '--output-filename', type=str, required=False,
+                        help='the path to the file to store the composite '
+                             'slices. If `None`, the slices will be displayed '
+                             'instead of stored.', default=None)
+    args = parser.parse_args()
+
+    if args.colors is None:
+        colors = get_default_colormap()
+        print('--colors is not specified. Use default colormap instead.')
+    else:
+        colors = load_colors(args.colors)
+
+    app = QApplication([sys.argv[0]])
+    window = ImageWindow(args.image, args.label_image, colors,
+                         initial_alpha=args.alpha, orient=args.orientation,
+                         initial_slice_idx=args.slice_idx,
+                         need_to_convert_colors=args.convert_colors)
+    window.show()
+    sys.exit(app.exec_())
