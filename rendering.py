@@ -303,3 +303,16 @@ class ImageRenderer:
         if self._oriented_images[orient]['image'] is None:
             self.initialize_oriented_images(orient)
         return self._oriented_images[orient]['image'].shape[2]
+
+    def get_slice_size(self, orient):
+        """Get the width and height of slices along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        if self._oriented_images[orient]['image'] is None:
+            self.initialize_oriented_images(orient)
+        width = self._oriented_images[orient]['image'].shape[1] 
+        height = self._oriented_images[orient]['image'].shape[0] 
+        return width, height
