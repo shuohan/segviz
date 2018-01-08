@@ -55,8 +55,13 @@ class ImageWindow(QLabel):
 
     @slice_idx.setter
     def slice_idx(self, slice_idx):
+        num_slices = self._image_renderer.get_num_slices(self.orient)
         if slice_idx is None:
+            self._slice_idx = int(num_slices / 2)
+        elif slice_idx < 0:
             self._slice_idx = 0
+        elif slice_idx >= num_slices:
+            self._slice_idx = num_slices - 1
         else:
             self._slice_idx = slice_idx
 
