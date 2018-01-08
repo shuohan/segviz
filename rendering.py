@@ -259,3 +259,14 @@ class ImageRenderer:
         elif slice_id >= max_num_slices:
             slice_id = max_num_slices - 1
         return slice_id
+
+    def get_num_slices(self, orient):
+        """Get the number of slices along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        if self._oriented_images[orient]['image'] is None:
+            self.initialize_oriented_images(orient)
+        return self._oriented_images[orient]['image'].shape[2]
