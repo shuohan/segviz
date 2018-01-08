@@ -31,10 +31,26 @@ class ImageWindow(QLabel):
         super(ImageWindow, self).__init__()
         self._image_renderer = ImageRenderer(image_path, label_image_path,
                                              colors, 1)
+        self._slice_idx = None
         self.orient = orient
         self.slice_idx = initial_slice_idx
         self.alpha = initial_alpha
         self._update()
+
+    @property
+    def orient(self):
+        return self._orient
+    
+    @orient.setter
+    def orient(self, orient):
+        if orient not in {'axial', 'coronal', 'sagittal'}:
+            raise RuntimeError('Orient shoud be "axial", "coronal", or '
+                               '"sagittal"')
+        else:
+            self._orient = orient
+            # different orientation has different num slices
+            if self.slice_idx is not None:
+                self.slice_idx = self.slice_idx
 
     @property
     def alpha(self):
@@ -80,6 +96,20 @@ class ImageWindow(QLabel):
             self.slice_idx += 1
         elif e.key() == Qt.Key_Down:
             self.slice_idx -= 1
+        elif e.key() == Qt.Key_BracketLeft:
+            if self.orient == 'axial':
+                self.orient = 'sagittal'
+            elif self.orient == 'coronal':
+                self.orient = 'axial'
+            elif self.orient == 'sagittal':
+                self.orient = 'coronal'
+        elif e.key() == Qt.Key_BracketRight:
+            if self.orient == 'axial':
+                self.orient = 'coronal'
+            elif self.orient == 'coronal':
+                self.orient = 'sagittal'
+            elif self.orient == 'sagittal':
+                self.orient = 'axial'
         
         self._update()
 
@@ -88,6 +118,6 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     colors = load_colors('colors.npy')
     window = ImageWindow('image.nii.gz', 'labels.nii.gz', colors,
-                         initial_slice_idx=10)
+                         initial_slice_idx=10, orient='coronal')
     window.show()
     sys.exit(app.exec_())
