@@ -231,7 +231,7 @@ class ImageRenderer:
         if oriented_images['image'] is None:
             self.initialize_oriented_images(orient)
 
-        slice_id = self._trim_slice_id(slice_id)
+        slice_id = self._trim_slice_id(orient, slice_id)
         image = oriented_images['image'][:, :, slice_id]
 
         if oriented_images['colored_label_image'] is None:
@@ -243,7 +243,7 @@ class ImageRenderer:
 
         return composition
 
-    def _trim_slice_id(self, slice_id):
+    def _trim_slice_id(self, orient, slice_id):
         """Trim the slice_id to [0, max_num_slices]
 
         Args:
@@ -253,7 +253,7 @@ class ImageRenderer:
             slice_id (int): Trimed index
             
         """
-        max_num_slices = self._image.shape[2]
+        max_num_slices = self.get_num_slices(orient) 
         if slice_id < 0:
             slice_id = 0
         elif slice_id >= max_num_slices:
