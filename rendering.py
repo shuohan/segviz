@@ -119,6 +119,32 @@ def concatenate_pils(images, bg_color):
     return result
 
 
+def resize_pil(image, width_zoom, height_zoom, keep_wh_ratio=True):
+    """Resize a Pillow image
+
+    Args:
+        image (PIL): The image to resize
+        width_zoom (float > 0): New width will be width_ratio x orig_width
+        height_zoom (float > 0): New height will be height_ratio x orig_height
+        keep_wh_ratio (bool): Keep the width/height ratio
+
+    """
+
+    orig_width, orig_height = image.size
+    width = width_zoom * orig_width
+    height = height_zoom * orig_height
+    if keep_wh_ratio:
+        orig_width_height_ratio = orig_width / orig_height
+        new_width_height_ratio = width / height
+        if new_width_height_ratio > orig_width_height_ratio:
+            width = height * orig_width_height_ratio
+        if new_width_height_ratio < orig_width_height_ratio:
+            height = width / orig_width_height_ratio
+    new_size = (int(width), int(height))
+    resized_image = image.resize(new_size, Image.BILINEAR)
+    return resized_image
+
+
 class ImageRenderer:
 
     """ Render image and its corresponding label_image.
@@ -215,13 +241,18 @@ class ImageRenderer:
         self._oriented_images[orient]['colored_label_image'] = assign_colors(
             self._oriented_images[orient]['label_image'], self._colors)
 
-    def get_slice(self, orient, slice_id, alpha):
+    def get_slice(self, orient, slice_id, alpha, width_zoom=1, height_zoom=1):
         """ Get a alpha-composition of a slice at an orientation
 
         Args:
             orient (str): {'axial', 'coronal', 'sagittal'}
             slice_id (int)
             alpha (float): [0, 1]
+            width_zoom (float > 0): The scaling factor of width
+            height_zoom (float > 0): The scaling factor of height
+                
+                The width/height ratio is unchanged, the final size is
+                determined by width_zoom and height_zoom together
 
         Returns:
             composite_slice (PIL image): alpha-composite 2D image slice
@@ -240,6 +271,8 @@ class ImageRenderer:
         label_image = np.squeeze(label_image)
 
         composition = compose_image_and_labels(image, label_image, alpha)
+        composition = resize_pil(composition, width_zoom=width_zoom,
+                                 height_zoom=height_zoom)
 
         return composition
 
