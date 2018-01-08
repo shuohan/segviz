@@ -165,12 +165,12 @@ class ImageRenderer:
                                '%s is used.' % color_shape)
         self._colors = colors
 
-        self._axial_image = None
-        self._axial_label_image = None
-        self._coronal_image = None
-        self._coronal_label_image = None
-        self._sagittal_image = None
-        self._sagittal_label_image = None
+        self._oriented_images = {'axial': dict(image=None, label_image=None,
+                                               colored_label_image=None),
+                                 'coronal': dict(image=None, label_image=None,
+                                                 colored_label_image=None),
+                                 'sagittal': dict(image=None, label_image=None,
+                                                  colored_label_image=None)}
 
         self.rescale_image(0, 1)
 
@@ -187,12 +187,24 @@ class ImageRenderer:
         min_val = min_val * MAX_UINT8
         max_val = max_val * MAX_UINT8
         self._image = rescale_image_to_uint8(self._image, min_val, max_val)
-        for orient in ('axial', 'coronal', 'sagittal'):
-            image_along_orient = getattr(self, '_%s_image' % orient)
-            if image_along_orient is not None:
-                image_along_orient = rescale_image_to_uint8(image_along_orient,
-                                                            min_val, max_val)
-                setattr(self, '_%s_image' % orient, image_along_orient)
+        for orient, images in self._oriented_images.items():
+            if images['image'] is not None:
+                images['image'] = rescale_image_to_uint8(images['image'],
+                                                         min_val, max_val)
+
+    def initialize_oriented_images(self, orient):
+
+        image_reslicer = Reslicer(self._image, self._image_affine, order=1)
+        label_image_reslicer = Reslicer(self._label_image,
+                                        self._image_affine, order=0)
+        oriented_images = self._oriented_images[orient]
+        oriented_images['image'] = getattr(image_reslicer, 'to_'+orient)()
+        oriented_images['label_image'] = getattr(label_image_reslicer,
+                                                 'to_'+orient)()
+
+    def assign_colors(self, orient):
+        self._oriented_images[orient]['colored_label_image'] = assign_colors(
+            self._oriented_images[orient]['label_image'], self._colors)
 
     def get_slice(self, orient, slice_id, alpha):
         """ Get a alpha-composition of a slice at an orientation
@@ -206,23 +218,14 @@ class ImageRenderer:
             composite_slice (PIL image): alpha-composite 2D image slice
 
         """
-        image_along_orient = getattr(self, '_%s_image' % orient)
-        label_image_along_orient = getattr(self, '_%s_label_image' % orient)
-        if image_along_orient is None or label_image_along_orient is None:
-            image_reslicer = Reslicer(self._image, self._image_affine, order=1)
-            label_image_reslicer = Reslicer(self._label_image,
-                                            self._image_affine, order=0)
-            image_along_orient = getattr(image_reslicer, 'to_%s' % orient)()
-            label_image_along_orient = getattr(label_image_reslicer,
-                                               'to_%s' % orient)()
-            label_image_along_orient = assign_colors(label_image_along_orient,
-                                                     self._colors)
-            setattr(self, '_%s_image' % orient, image_along_orient)
-            setattr(self, '_%s_label_image' % orient, label_image_along_orient)
-
+        oriented_images = self._oriented_images[orient]
+        if oriented_images['image'] is None:
+            self.initialize_oriented_images(orient)
         slice_id = self._trim_slice_id(slice_id)
-        image_slice = image_along_orient[:, :, slice_id]
-        label_image_slice = label_image_along_orient[:, :, slice_id, :]
+        image_slice = oriented_images['image'][:, :, slice_id]
+        if oriented_images['colored_label_image'] is None:
+            self.assign_colors(orient)
+        label_image_slice = oriented_images['colored_label_image'][:,:,slice_id]
         label_image_slice = np.squeeze(label_image_slice)
         composite_slice = compose_image_and_labels(image_slice,
                                                    label_image_slice, alpha)
