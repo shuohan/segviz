@@ -202,8 +202,8 @@ class ImageRenderer:
         image_reslicer = Reslicer(self._image, self._affine, order=1)
         label_reslicer = Reslicer(self._label_image, self._affine, order=0)
         oriented_images = self._oriented_images[orient]
-        oriented_images['image'] = getattr(image_reslicer, 'to_'+orient)()
-        oriented_images['label_image'] = getattr(label_reslicer, 'to_'+orient)()
+        oriented_images['image'] = image_reslicer.to_view(orient)
+        oriented_images['label_image'] = label_reslicer.to_view(orient)
 
     def assign_colors(self, orient):
         """ Assign colors to label image along an orientation
