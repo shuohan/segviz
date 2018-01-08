@@ -150,7 +150,7 @@ class ImageRenderer:
         """
         image_nib = nib.load(image_path)
         self._image = image_nib.get_data()
-        self._image_affine = image_nib.affine
+        self._affine = image_nib.affine
 
         label_image_nib = nib.load(label_image_path)
         self._label_image = label_image_nib.get_data().astype(int)
@@ -199,13 +199,11 @@ class ImageRenderer:
             orient (str): 'axial', 'coronal', 'sagittal'
 
         """
-        image_reslicer = Reslicer(self._image, self._image_affine, order=1)
-        label_image_reslicer = Reslicer(self._label_image,
-                                        self._image_affine, order=0)
+        image_reslicer = Reslicer(self._image, self._affine, order=1)
+        label_reslicer = Reslicer(self._label_image, self._affine, order=0)
         oriented_images = self._oriented_images[orient]
         oriented_images['image'] = getattr(image_reslicer, 'to_'+orient)()
-        oriented_images['label_image'] = getattr(label_image_reslicer,
-                                                 'to_'+orient)()
+        oriented_images['label_image'] = getattr(label_reslicer, 'to_'+orient)()
 
     def assign_colors(self, orient):
         """ Assign colors to label image along an orientation
@@ -232,15 +230,18 @@ class ImageRenderer:
         oriented_images = self._oriented_images[orient]
         if oriented_images['image'] is None:
             self.initialize_oriented_images(orient)
+
         slice_id = self._trim_slice_id(slice_id)
-        image_slice = oriented_images['image'][:, :, slice_id]
+        image = oriented_images['image'][:, :, slice_id]
+
         if oriented_images['colored_label_image'] is None:
             self.assign_colors(orient)
-        label_image_slice = oriented_images['colored_label_image'][:,:,slice_id]
-        label_image_slice = np.squeeze(label_image_slice)
-        composite_slice = compose_image_and_labels(image_slice,
-                                                   label_image_slice, alpha)
-        return composite_slice
+        label_image = oriented_images['colored_label_image'][:, :, slice_id]
+        label_image = np.squeeze(label_image)
+
+        composition = compose_image_and_labels(image, label_image, alpha)
+
+        return composition
 
     def _trim_slice_id(self, slice_id):
         """Trim the slice_id to [0, max_num_slices]
