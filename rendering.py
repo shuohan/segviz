@@ -119,6 +119,32 @@ def concatenate_pils(images, bg_color):
     return result
 
 
+def resize_pil(image, width_zoom, height_zoom, keep_wh_ratio=True):
+    """Resize a Pillow image
+
+    Args:
+        image (PIL): The image to resize
+        width_zoom (float > 0): New width will be width_ratio x orig_width
+        height_zoom (float > 0): New height will be height_ratio x orig_height
+        keep_wh_ratio (bool): Keep the width/height ratio
+
+    """
+
+    orig_width, orig_height = image.size
+    width = width_zoom * orig_width
+    height = height_zoom * orig_height
+    if keep_wh_ratio:
+        orig_width_height_ratio = orig_width / orig_height
+        new_width_height_ratio = width / height
+        if new_width_height_ratio > orig_width_height_ratio:
+            width = height * orig_width_height_ratio
+        if new_width_height_ratio < orig_width_height_ratio:
+            height = width / orig_width_height_ratio
+    new_size = (int(width), int(height))
+    resized_image = image.resize(new_size, Image.BILINEAR)
+    return resized_image
+
+
 class ImageRenderer:
 
     """ Render image and its corresponding label_image.
@@ -150,7 +176,7 @@ class ImageRenderer:
         """
         image_nib = nib.load(image_path)
         self._image = image_nib.get_data()
-        self._image_affine = image_nib.affine
+        self._affine = image_nib.affine
 
         label_image_nib = nib.load(label_image_path)
         self._label_image = label_image_nib.get_data().astype(int)
@@ -165,12 +191,12 @@ class ImageRenderer:
                                '%s is used.' % color_shape)
         self._colors = colors
 
-        self._axial_image = None
-        self._axial_label_image = None
-        self._coronal_image = None
-        self._coronal_label_image = None
-        self._sagittal_image = None
-        self._sagittal_label_image = None
+        self._oriented_images = {'axial': dict(image=None, label_image=None,
+                                               colored_label_image=None),
+                                 'coronal': dict(image=None, label_image=None,
+                                                 colored_label_image=None),
+                                 'sagittal': dict(image=None, label_image=None,
+                                                  colored_label_image=None)}
 
         self.rescale_image(0, 1)
 
@@ -187,48 +213,70 @@ class ImageRenderer:
         min_val = min_val * MAX_UINT8
         max_val = max_val * MAX_UINT8
         self._image = rescale_image_to_uint8(self._image, min_val, max_val)
-        for orient in ('axial', 'coronal', 'sagittal'):
-            image_along_orient = getattr(self, '_%s_image' % orient)
-            if image_along_orient is not None:
-                image_along_orient = rescale_image_to_uint8(image_along_orient,
-                                                            min_val, max_val)
-                setattr(self, '_%s_image' % orient, image_along_orient)
+        for orient, images in self._oriented_images.items():
+            if images['image'] is not None:
+                images['image'] = rescale_image_to_uint8(images['image'],
+                                                         min_val, max_val)
 
-    def get_slice(self, orient, slice_id, alpha):
+    def initialize_oriented_images(self, orient):
+        """ Initialize images along an orientation
+        
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        image_reslicer = Reslicer(self._image, self._affine, order=1)
+        label_reslicer = Reslicer(self._label_image, self._affine, order=0)
+        oriented_images = self._oriented_images[orient]
+        oriented_images['image'] = image_reslicer.to_view(orient)
+        oriented_images['label_image'] = label_reslicer.to_view(orient)
+
+    def assign_colors(self, orient):
+        """ Assign colors to label image along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        self._oriented_images[orient]['colored_label_image'] = assign_colors(
+            self._oriented_images[orient]['label_image'], self._colors)
+
+    def get_slice(self, orient, slice_id, alpha, width_zoom=1, height_zoom=1):
         """ Get a alpha-composition of a slice at an orientation
 
         Args:
             orient (str): {'axial', 'coronal', 'sagittal'}
             slice_id (int)
             alpha (float): [0, 1]
+            width_zoom (float > 0): The scaling factor of width
+            height_zoom (float > 0): The scaling factor of height
+                
+                The width/height ratio is unchanged, the final size is
+                determined by width_zoom and height_zoom together
 
         Returns:
             composite_slice (PIL image): alpha-composite 2D image slice
 
         """
-        image_along_orient = getattr(self, '_%s_image' % orient)
-        label_image_along_orient = getattr(self, '_%s_label_image' % orient)
-        if image_along_orient is None or label_image_along_orient is None:
-            image_reslicer = Reslicer(self._image, self._image_affine, order=1)
-            label_image_reslicer = Reslicer(self._label_image,
-                                            self._image_affine, order=0)
-            image_along_orient = getattr(image_reslicer, 'to_%s' % orient)()
-            label_image_along_orient = getattr(label_image_reslicer,
-                                               'to_%s' % orient)()
-            label_image_along_orient = assign_colors(label_image_along_orient,
-                                                     self._colors)
-            setattr(self, '_%s_image' % orient, image_along_orient)
-            setattr(self, '_%s_label_image' % orient, label_image_along_orient)
+        oriented_images = self._oriented_images[orient]
+        if oriented_images['image'] is None:
+            self.initialize_oriented_images(orient)
 
-        slice_id = self._trim_slice_id(slice_id)
-        image_slice = image_along_orient[:, :, slice_id]
-        label_image_slice = label_image_along_orient[:, :, slice_id, :]
-        label_image_slice = np.squeeze(label_image_slice)
-        composite_slice = compose_image_and_labels(image_slice,
-                                                   label_image_slice, alpha)
-        return composite_slice
+        slice_id = self._trim_slice_id(orient, slice_id)
+        image = oriented_images['image'][:, :, slice_id]
 
-    def _trim_slice_id(self, slice_id):
+        if oriented_images['colored_label_image'] is None:
+            self.assign_colors(orient)
+        label_image = oriented_images['colored_label_image'][:, :, slice_id]
+        label_image = np.squeeze(label_image)
+
+        composition = compose_image_and_labels(image, label_image, alpha)
+        composition = resize_pil(composition, width_zoom=width_zoom,
+                                 height_zoom=height_zoom)
+
+        return composition
+
+    def _trim_slice_id(self, orient, slice_id):
         """Trim the slice_id to [0, max_num_slices]
 
         Args:
@@ -238,9 +286,33 @@ class ImageRenderer:
             slice_id (int): Trimed index
             
         """
-        max_num_slices = self._image.shape[2]
+        max_num_slices = self.get_num_slices(orient) 
         if slice_id < 0:
             slice_id = 0
         elif slice_id >= max_num_slices:
             slice_id = max_num_slices - 1
         return slice_id
+
+    def get_num_slices(self, orient):
+        """Get the number of slices along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        if self._oriented_images[orient]['image'] is None:
+            self.initialize_oriented_images(orient)
+        return self._oriented_images[orient]['image'].shape[2]
+
+    def get_slice_size(self, orient):
+        """Get the width and height of slices along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        if self._oriented_images[orient]['image'] is None:
+            self.initialize_oriented_images(orient)
+        width = self._oriented_images[orient]['image'].shape[1] 
+        height = self._oriented_images[orient]['image'].shape[0] 
+        return width, height
