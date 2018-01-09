@@ -72,7 +72,7 @@ def add_alpha_column(colors):
     return colors
 
 
-def concatenate_pils(images):
+def concatenate_pils(images, bg_color):
     """Concatenate images to a grid
 
     Args:
@@ -102,7 +102,7 @@ def concatenate_pils(images):
     max_heights_per_row = np.max(heights, axis=1)
     width = np.sum(max_widths_per_column)
     height = np.sum(max_heights_per_row)
-    result = Image.new('RGBA', (width, height))
+    result = Image.new('RGBA', (width, height), color=bg_color)
 
     w_offset = 0
     h_offset = 0

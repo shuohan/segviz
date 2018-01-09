@@ -74,6 +74,10 @@ if __name__ == '__main__':
                         help='the path to the file to store the composite '
                              'slices. If `None`, the slices will be displayed '
                              'instead of stored.', default=None)
+    parser.add_argument('-b', '--background-color', type=str, required=False,
+                        choices=['black', 'none', 'white'], default='black',
+                        help='color to fill out the gaps between pictures on '
+                             'grid')
     args = parser.parse_args()
 
     if args.colors is None:
@@ -99,7 +103,9 @@ if __name__ == '__main__':
             for i in range(num_columns - len(slice_indices[orient])):
                 row.append(Image.new('RGBA', (0, 0)))
             slices.append(row)
-    grid = concatenate_pils(slices)
+    if args.background_color == 'none':
+        args.background_color = None
+    grid = concatenate_pils(slices, bg_color=args.background_color)
     if grid.size == (0, 0):
         print('No slices will be showed. Use --axial-slices --coronal-slices '
               '--sagittal-slices to specify which slices to show')
