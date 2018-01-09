@@ -5,11 +5,9 @@
 """
 
 import os
-from PyQt5.QtCore import QDir, Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QFileDialog, QGridLayout,
-                             QGroupBox, QHBoxLayout, QLabel, QPushButton,
-                             QSizePolicy, QSpinBox, QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import QLabel
 from PIL.ImageQt import ImageQt
 
 from rendering import ImageRenderer
