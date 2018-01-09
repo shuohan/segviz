@@ -15,7 +15,7 @@ if __name__ == '__main__':
                    'left/right arrows to change the alpha of the labels; '
                    'left/right square brackets to change orientations (axial, '
                    'coronal, or sagittal). The image can also be resized by '
-                   'resizing the window.')
+                   'resizing the window. Pressing Enter will save the image.')
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-i', '--image', required=True,
                         help='the path to the nii image to show')
@@ -59,10 +59,10 @@ if __name__ == '__main__':
                              'the colors array so that (2, 5, 10) rows of the '
                              'new array has the (0, 1, 2) rows of the original '
                              'colors.', default=False)
-    parser.add_argument('-o', '--output-filename', type=str, required=False,
-                        help='the path to the file to store the composite '
-                             'slices. If `None`, the slices will be displayed '
-                             'instead of stored.', default=None)
+    parser.add_argument('-o', '--output-dir', type=str, required=False,
+                        help='the directory to store the the displayed image. '
+                             'If None, pressing Enter will not save the image.',
+                        default=None)
     args = parser.parse_args()
 
     if args.colors is None:
@@ -75,6 +75,7 @@ if __name__ == '__main__':
     window = ImageWindow(args.image, args.label_image, colors,
                          initial_alpha=args.alpha, orient=args.orientation,
                          initial_slice_idx=args.slice_idx,
-                         need_to_convert_colors=args.convert_colors)
+                         need_to_convert_colors=args.convert_colors,
+                         output_dir=args.output_dir)
     window.show()
     sys.exit(app.exec_())
