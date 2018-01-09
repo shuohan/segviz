@@ -108,7 +108,10 @@ def concatenate_pils(images, bg_color):
     h_offset = 0
     for image_row, h in zip(images, max_heights_per_row):
         for image, w in zip(image_row, max_widths_per_column):
-            result.paste(image, (w_offset, h_offset))
+            image_width, image_height = image.size
+            dw = int((w - image_width) / 2)
+            dh = int((h - image_height) / 2)
+            result.paste(image, (w_offset + dw, h_offset + dh))
             w_offset += w
         w_offset = 0
         h_offset += h
