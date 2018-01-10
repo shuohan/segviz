@@ -7,9 +7,9 @@ import nibabel as nib
 import numpy as np
 from PIL import Image, ImageColor
 
-from image_processing import rescale_image_to_uint8, assign_colors
-from image_processing import compose_image_and_labels
-from reslice import Reslicer
+from .image_processing import rescale_image_to_uint8, assign_colors
+from .image_processing import compose_image_and_labels
+from .reslice import Reslicer
 
 MIN_UINT8 = 0
 MAX_UINT8 = 255

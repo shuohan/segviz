@@ -5,9 +5,9 @@ import argparse
 import sys
 from PyQt5.QtWidgets import QApplication
 
-from file_loading import load_colors
-from gui import ImageWindow
-from rendering import get_default_colormap
+from segmentation_visualization.file_loading import load_colors
+from segmentation_visualization.gui import ImageWindow
+from segmentation_visualization.rendering import get_default_colormap
 
 if __name__ == '__main__':
     description = ('interactively show slices of labels on top of image. Users '
