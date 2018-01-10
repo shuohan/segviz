@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='segmentation_visualization',
-      version='2.1.1',
+      version='2.1.2',
       description='Show the label image on top of the correspoing image',
       author='Shuo Han',
       author_email='shuohanthu@gmail.com',
