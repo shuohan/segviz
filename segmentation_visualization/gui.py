@@ -10,7 +10,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QLabel
 from PIL.ImageQt import ImageQt
 
-from .rendering import ImageRenderer
+from .rendering import ImagePairRenderer
 
 
 class ImageWindow(QLabel):
