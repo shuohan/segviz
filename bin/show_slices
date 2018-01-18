@@ -86,6 +86,10 @@ if __name__ == '__main__':
                         choices=['black', 'none', 'white'], default='black',
                         help='color to fill out the gaps between pictures on '
                              'grid')
+    parser.add_argument('-t', '--transpose-grid', action='store_true',
+                        default=False, required=False,
+                        help='transpose the grid so each column contains '
+                             'slices of a subject along an orientation')
     args = parser.parse_args()
 
     if not operator.xor(bool(args.input_pair), bool(args.image)):
@@ -120,6 +124,8 @@ if __name__ == '__main__':
                 slices.append(row)
         if args.background_color == 'none':
             args.background_color = None
+        if args.transpose_grid:
+            slices = list(zip(*slices))
         grid = concatenate_pils(slices, bg_color=args.background_color)
         if grid.size == (0, 0):
             print('No slices will be showed. Use --axial-slices --coronal-slices '
