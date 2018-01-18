@@ -57,8 +57,8 @@ class ImageWindow(QLabel):
 
         """
         super(ImageWindow, self).__init__()
-        self._image_renderer = ImageRenderer(image_path, label_image_path,
-                                             colors, need_to_convert_colors)
+        self._image_renderer = ImagePairRenderer(image_path, label_image_path,
+                                                 colors, need_to_convert_colors)
         # setting orient requires slice_idx but setting slice_idx also requires
         # the orient
         self.image_path = image_path
