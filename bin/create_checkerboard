@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+import numpy as np
+from PIL import Image
+
+desc = 'Create checkboard fusion of two images'
+parser = argparse.ArgumentParser(description=desc)
+parser.add_argument('-i1', '--image1', help='Image to fuse')
+parser.add_argument('-i2', '--image2', help='Image to fuse')
+parser.add_argument('-m1', '--mode1', help='Mode of image 1', required=False,
+                    default='L', choices=['L', 'RGB', 'RGBA'])
+parser.add_argument('-m2', '--mode2', help='Mode of image 2', required=False,
+                    default='L', choices=['L', 'RGB', 'RGBA'])
+parser.add_argument('-a', '--alpha', help='The alpha of image 2',
+                    required=False, default=0, type=float)
+parser.add_argument('-s', '--patch-size', type=int, default=10, required=False,
+                    help='The size of the patch (width = height)')
+parser.add_argument('-o', '--output-filename', required=False, default='',
+                    help='The filename of the ouput fused image')
+args = parser.parse_args()
+
+image1 = Image.open(args.image1).convert('RGBA')
+image2 = Image.open(args.image2).convert('RGBA')
+image1_array = np.array(image1, dtype=np.uint8)
+image2_array = np.array(image2, dtype=np.uint8)
+
+height, width = image1_array.shape[:2]
+left = 0
+top = 0
+alpha_upper = args.alpha
+alpha = args.alpha
+while top < height:
+    hstart = top
+    hend = hstart + args.patch_size
+    while left < width:
+        wstart = left
+        wend = left + args.patch_size
+        image1_array[hstart:hend, wstart:wend, 3] = \
+            image1_array[hstart:hend, wstart:wend, 3] * (1 - alpha)
+        image2_array[hstart:hend, wstart:wend, 3] = \
+            image2_array[hstart:hend, wstart:wend, 3] * alpha
+        left = wend
+        alpha = 1 - alpha
+    top = hend
+    left = 0
+    alpha = 1 - alpha_upper
+    alpha_upper = alpha
+
+image1 = Image.fromarray(image1_array)
+image2 = Image.fromarray(image2_array)
+composition = image1_array + image2_array
+composition = Image.alpha_composite(image1, image2)
+# composition = Image.fromarray(composition, 'RGBA')
+if args.output_filename:
+    composition.save(args.output_filename)
+else:
+    composition.show()
