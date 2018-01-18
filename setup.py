@@ -9,4 +9,5 @@ setup(name='segmentation_visualization',
       license='MIT',
       packages=['segmentation_visualization'],
       install_requires=['nibabel', 'numpy', 'scipy', 'Pillow'],
-      scripts=['bin/interact_image', 'bin/show_slices'])
+      scripts=['bin/interact_image', 'bin/show_slices',
+               'bin/create_checkerboard'])
