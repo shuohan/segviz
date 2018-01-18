@@ -146,8 +146,121 @@ def resize_pil(image, width_zoom, height_zoom, keep_wh_ratio=True):
 
 
 class ImageRenderer:
+    """Render image
 
-    """ Render image and its corresponding label_image.
+    """
+    def __init__(self, image_path):
+        """
+        Args:
+            image_path (str): the path to the image
+
+        """
+        image_nib = nib.load(image_path)
+        self._image = image_nib.get_data()
+        self._affine = image_nib.affine
+
+        self._oriented_images = {'axial': dict(image=None),
+                                 'coronal': dict(image=None),
+                                 'sagittal': dict(image=None)}
+
+        self.rescale_image(0, 1)
+
+    def get_slice(self, orient, slice_id, width_zoom=1, height_zoom=1):
+        """ Get a alpha-composition of a slice at an orientation
+
+        Args:
+            orient (str): {'axial', 'coronal', 'sagittal'}
+            slice_id (int)
+            width_zoom (float > 0): The scaling factor of width
+            height_zoom (float > 0): The scaling factor of height
+                
+                The width/height ratio is unchanged, the final size is
+                determined by width_zoom and height_zoom together
+
+        Returns:
+            image (PIL image): The selected slice of the image
+
+        """
+        oriented_images = self._oriented_images[orient]
+        if oriented_images['image'] is None:
+            self.initialize_oriented_images(orient)
+        slice_id = self._trim_slice_id(orient, slice_id)
+        image = oriented_images['image'][:, :, slice_id]
+        image = Image.fromarray(image, 'L')
+        return image
+
+    def initialize_oriented_images(self, orient):
+        """ Initialize images along an orientation
+        
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        image_reslicer = Reslicer(self._image, self._affine, order=1)
+        self._oriented_images[orient]['image'] = image_reslicer.to_view(orient)
+
+    def get_num_slices(self, orient):
+        """Get the number of slices along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        if self._oriented_images[orient]['image'] is None:
+            self.initialize_oriented_images(orient)
+        return self._oriented_images[orient]['image'].shape[2]
+
+    def get_slice_size(self, orient):
+        """Get the width and height of slices along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        if self._oriented_images[orient]['image'] is None:
+            self.initialize_oriented_images(orient)
+        width = self._oriented_images[orient]['image'].shape[1] 
+        height = self._oriented_images[orient]['image'].shape[0] 
+        return width, height
+
+    def rescale_image(self, min_val, max_val):
+        """Rescale image intensity to [min_val, max_val]
+
+        Other details see function rescale_image_to_uint8
+
+        Args:
+            min_val (float >= 0): The lower limit of the intensity
+            max_val (float <= 1): The upper limit of the intensity
+
+        """
+        min_val = min_val * MAX_UINT8
+        max_val = max_val * MAX_UINT8
+        self._image = rescale_image_to_uint8(self._image, min_val, max_val)
+        for orient, images in self._oriented_images.items():
+            if images['image'] is not None:
+                images['image'] = rescale_image_to_uint8(images['image'],
+                                                         min_val, max_val)
+
+    def _trim_slice_id(self, orient, slice_id):
+        """Trim the slice_id to [0, max_num_slices]
+
+        Args:
+            slice_id (int): The index of the slice to show
+
+        Returns:
+            slice_id (int): Trimed index
+            
+        """
+        max_num_slices = self.get_num_slices(orient) 
+        if slice_id < 0:
+            slice_id = 0
+        elif slice_id >= max_num_slices:
+            slice_id = max_num_slices - 1
+        return slice_id
+
+
+class ImagePairRenderer(ImageRenderer):
+    """ Render image and its corresponding label_image
 
     This class takes an 3D image and its label image as inputs. By setting alpha
     and slice index, it can output a alpha-composed 2D slice. This class can
@@ -199,24 +312,6 @@ class ImageRenderer:
                                                   colored_label_image=None)}
 
         self.rescale_image(0, 1)
-
-    def rescale_image(self, min_val, max_val):
-        """Rescale image intensity to [min_val, max_val]
-
-        Other details see function rescale_image_to_uint8
-
-        Args:
-            min_val (float >= 0): The lower limit of the intensity
-            max_val (float <= 1): The upper limit of the intensity
-
-        """
-        min_val = min_val * MAX_UINT8
-        max_val = max_val * MAX_UINT8
-        self._image = rescale_image_to_uint8(self._image, min_val, max_val)
-        for orient, images in self._oriented_images.items():
-            if images['image'] is not None:
-                images['image'] = rescale_image_to_uint8(images['image'],
-                                                         min_val, max_val)
 
     def initialize_oriented_images(self, orient):
         """ Initialize images along an orientation
@@ -275,44 +370,3 @@ class ImageRenderer:
                                  height_zoom=height_zoom)
 
         return composition
-
-    def _trim_slice_id(self, orient, slice_id):
-        """Trim the slice_id to [0, max_num_slices]
-
-        Args:
-            slice_id (int): The index of the slice to show
-
-        Returns:
-            slice_id (int): Trimed index
-            
-        """
-        max_num_slices = self.get_num_slices(orient) 
-        if slice_id < 0:
-            slice_id = 0
-        elif slice_id >= max_num_slices:
-            slice_id = max_num_slices - 1
-        return slice_id
-
-    def get_num_slices(self, orient):
-        """Get the number of slices along an orientation
-
-        Args:
-            orient (str): 'axial', 'coronal', 'sagittal'
-
-        """
-        if self._oriented_images[orient]['image'] is None:
-            self.initialize_oriented_images(orient)
-        return self._oriented_images[orient]['image'].shape[2]
-
-    def get_slice_size(self, orient):
-        """Get the width and height of slices along an orientation
-
-        Args:
-            orient (str): 'axial', 'coronal', 'sagittal'
-
-        """
-        if self._oriented_images[orient]['image'] is None:
-            self.initialize_oriented_images(orient)
-        width = self._oriented_images[orient]['image'].shape[1] 
-        height = self._oriented_images[orient]['image'].shape[0] 
-        return width, height
