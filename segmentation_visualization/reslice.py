@@ -75,6 +75,45 @@ class Reslicer:
         affine = LPI_to_ASR_affine.dot(self.LPI_minus_affine)
         return affine
 
+    @property
+    def axial_shape(self):
+        """Shape of the image on axial view
+        
+        Returns:
+            shape (tuple): (3,) int tuple with shape along i, j, k
+
+        """
+        r = self._calc_scanner_coords_range(self.image_array.shape,
+                                            self.RAI_minus_affine)
+        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        return shape
+
+    @property
+    def coronal_shape(self):
+        """Shape of the image on coronal view
+        
+        Returns:
+            shape (tuple): (3,) int tuple with shape along i, j, k
+
+        """
+        r = self._calc_scanner_coords_range(self.image_array.shape,
+                                            self.RSA_minus_affine)
+        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        return shape
+
+    @property
+    def sagittal_shape(self):
+        """Shape of the image on sagittal view
+        
+        Returns:
+            shape (tuple): (3,) tuple with shape along i, j, k
+
+        """
+        r = self._calc_scanner_coords_range(self.image_array.shape,
+                                            self.ASR_minus_affine)
+        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        return shape
+
     def to_LPI_minus(self):
         """Transform `image_array` to LPI-
 
