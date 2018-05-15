@@ -47,6 +47,7 @@ class Reslicer:
 
     @property
     def RAI_minus_affine(self):
+        """Affine from naive space to RAI minus"""
         LPI_to_RAI_affine = np.array([[-1, 0, 0, 0],
                                       [0, -1, 0, 0],
                                       [0, 0, 1, 0],
@@ -56,6 +57,7 @@ class Reslicer:
 
     @property
     def RSA_minus_affine(self):
+        """Affine from naive space to RSA minus"""
         LPI_to_RSA_affine = np.array([[-1, 0, 0, 0],
                                       [0, 0, -1, 0],
                                       [0, -1, 0, 0],
@@ -65,6 +67,7 @@ class Reslicer:
 
     @property
     def ASR_minus_affine(self):
+        """Affine from naive space to ASR minus"""
         LPI_to_ASR_affine = np.array([[0, -1, 0, 0],
                                       [0, 0, -1, 0],
                                       [-1, 0, 0, 0],
