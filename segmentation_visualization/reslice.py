@@ -80,12 +80,12 @@ class Reslicer:
         """Shape of the image on axial view
         
         Returns:
-            shape (tuple): (3,) int tuple with shape along i, j, k
+            shape (tuple): (3,) int tuple with shape along x, y, z
 
         """
         r = self._calc_scanner_coords_range(self.image_array.shape,
                                             self.RAI_minus_affine)
-        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        shape = tuple(np.ceil(r[1] - r[0] + 1).astype(int).tolist())
         return shape
 
     @property
@@ -93,12 +93,12 @@ class Reslicer:
         """Shape of the image on coronal view
         
         Returns:
-            shape (tuple): (3,) int tuple with shape along i, j, k
+            shape (tuple): (3,) int tuple with shape along x, y, z
 
         """
         r = self._calc_scanner_coords_range(self.image_array.shape,
                                             self.RSA_minus_affine)
-        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        shape = tuple(np.ceil(r[1] - r[0] + 1).astype(int).tolist())
         return shape
 
     @property
@@ -106,12 +106,12 @@ class Reslicer:
         """Shape of the image on sagittal view
         
         Returns:
-            shape (tuple): (3,) tuple with shape along i, j, k
+            shape (tuple): (3,) tuple with shape along x, y, z
 
         """
         r = self._calc_scanner_coords_range(self.image_array.shape,
                                             self.ASR_minus_affine)
-        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        shape = tuple(np.ceil(r[1] - r[0] + 1).astype(int).tolist())
         return shape
 
     def to_LPI_minus(self):
