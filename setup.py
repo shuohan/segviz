@@ -10,4 +10,4 @@ setup(name='segmentation_visualization',
       packages=['segmentation_visualization'],
       install_requires=['nibabel', 'numpy', 'scipy', 'Pillow'],
       scripts=['bin/interact_image', 'bin/show_slices',
-               'bin/create_checkerboard'])
+               'bin/create_checkerboard', 'bin/show_shapes'])
