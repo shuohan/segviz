@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+
+description = 'Show axial, coronal, and sagittal shapes of a nifti image'
+parser = argparse.ArgumentParser(description=description)
+parser.add_argument('image', help='The nifti image to show')
+parser.add_argument('-o', '--orient', action='append',
+                    default=['axial', 'coronal', 'sagittal'],
+                    choices=['axial', 'coronal', 'sagittal'])
+args = parser.parse_args()
+
+import nibabel as nib
+
+from segmentation_visualization.reslice import Reslicer
+
+
+obj = nib.load(args.image)
+reslicer = Reslicer(obj.get_data(), obj.affine)
+for orient in args.orient:
+    shape = getattr(reslicer, orient+'_shape')
+    print(orient, shape)

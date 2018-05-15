@@ -18,7 +18,7 @@ class Reslicer:
         image_array (3D numpy array): The image data read from nibabel
         order (int): The interpolation order (0 for nearest interpolation, 1 for
             linear interpolation, etc.)
-        _LPI_minus_affine (4x4 numpy 2D array): The affine matrix provided by
+        LPI_minus_affine (4x4 numpy 2D array): The affine matrix provided by
             nibabel transforming the image into LPI- coornidate
 
     """
@@ -42,8 +42,77 @@ class Reslicer:
         assert np.array_equal(LPI_minus_affine.shape, (4, 4)) # homogeneous
 
         self.image_array = image_array
-        self._LPI_minus_affine = LPI_minus_affine
+        self.LPI_minus_affine = LPI_minus_affine
         self.order = order
+
+    @property
+    def RAI_minus_affine(self):
+        """Affine from naive space to RAI minus"""
+        LPI_to_RAI_affine = np.array([[-1, 0, 0, 0],
+                                      [0, -1, 0, 0],
+                                      [0, 0, 1, 0],
+                                      [0, 0, 0, 1]])
+        affine = LPI_to_RAI_affine.dot(self.LPI_minus_affine)
+        return affine
+
+    @property
+    def RSA_minus_affine(self):
+        """Affine from naive space to RSA minus"""
+        LPI_to_RSA_affine = np.array([[-1, 0, 0, 0],
+                                      [0, 0, -1, 0],
+                                      [0, -1, 0, 0],
+                                      [0, 0, 0, 1]])
+        affine = LPI_to_RSA_affine.dot(self.LPI_minus_affine)
+        return affine
+
+    @property
+    def ASR_minus_affine(self):
+        """Affine from naive space to ASR minus"""
+        LPI_to_ASR_affine = np.array([[0, -1, 0, 0],
+                                      [0, 0, -1, 0],
+                                      [-1, 0, 0, 0],
+                                      [0, 0, 0, 1]])
+        affine = LPI_to_ASR_affine.dot(self.LPI_minus_affine)
+        return affine
+
+    @property
+    def axial_shape(self):
+        """Shape of the image on axial view
+        
+        Returns:
+            shape (tuple): (3,) int tuple with shape along i, j, k
+
+        """
+        r = self._calc_scanner_coords_range(self.image_array.shape,
+                                            self.RAI_minus_affine)
+        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        return shape
+
+    @property
+    def coronal_shape(self):
+        """Shape of the image on coronal view
+        
+        Returns:
+            shape (tuple): (3,) int tuple with shape along i, j, k
+
+        """
+        r = self._calc_scanner_coords_range(self.image_array.shape,
+                                            self.RSA_minus_affine)
+        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        return shape
+
+    @property
+    def sagittal_shape(self):
+        """Shape of the image on sagittal view
+        
+        Returns:
+            shape (tuple): (3,) tuple with shape along i, j, k
+
+        """
+        r = self._calc_scanner_coords_range(self.image_array.shape,
+                                            self.ASR_minus_affine)
+        shape = tuple((r[1] - r[0]).astype(int).tolist())
+        return shape
 
     def to_LPI_minus(self):
         """Transform `image_array` to LPI-
@@ -52,7 +121,7 @@ class Reslicer:
             resliced_image (3D numpy array): Transfromd image
         
         """
-        return self._reslice(self.image_array, self._LPI_minus_affine)
+        return self._reslice(self.image_array, self.LPI_minus_affine)
 
     def to_RAI_minus(self):
         """Transform `image_array` to RAI-
@@ -61,12 +130,7 @@ class Reslicer:
             resliced_image (3D numpy array): Transfromd image
         
         """
-        LPI_to_RAI_affine = np.array([[-1, 0, 0, 0],
-                                      [0, -1, 0, 0],
-                                      [0, 0, 1, 0],
-                                      [0, 0, 0, 1]])
-        affine = LPI_to_RAI_affine.dot(self._LPI_minus_affine)
-        return self._reslice(self.image_array, affine)
+        return self._reslice(self.image_array, self.RAI_minus_affine)
 
     def to_RSA_minus(self):
         """Transform `image_array` to RSA-
@@ -75,12 +139,7 @@ class Reslicer:
             resliced_image (3D numpy array): Transfromd image
         
         """
-        LPI_to_RSA_affine = np.array([[-1, 0, 0, 0],
-                                      [0, 0, -1, 0],
-                                      [0, -1, 0, 0],
-                                      [0, 0, 0, 1]])
-        affine = LPI_to_RSA_affine.dot(self._LPI_minus_affine)
-        return self._reslice(self.image_array, affine)
+        return self._reslice(self.image_array, self.RSA_minus_affine)
 
     def to_ASR_minus(self):
         """Transform `image_array` to ASR-
@@ -89,12 +148,7 @@ class Reslicer:
             resliced_image (3D numpy array): Transfromd image
         
         """
-        LPI_to_ASR_affine = np.array([[0, -1, 0, 0],
-                                      [0, 0, -1, 0],
-                                      [-1, 0, 0, 0],
-                                      [0, 0, 0, 1]])
-        affine = LPI_to_ASR_affine.dot(self._LPI_minus_affine)
-        return self._reslice(self.image_array, affine)
+        return self._reslice(self.image_array, self.ASR_minus_affine)
 
     def to_view(self, view):
         """Transfrom `image_array` to a specific view
