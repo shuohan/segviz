@@ -9,6 +9,7 @@ import sys
 from segmentation_visualization.file_loading import load_colors
 from segmentation_visualization.rendering import ImageRenderer
 from segmentation_visualization.rendering import ImagePairRenderer
+from segmentation_visualization.rendering import ImageEdgeRenderer
 from segmentation_visualization.rendering import concatenate_pils
 from segmentation_visualization.rendering import get_default_colormap
 
@@ -90,6 +91,9 @@ if __name__ == '__main__':
                         default=False, required=False,
                         help='transpose the grid so each column contains '
                              'slices of a subject along an orientation')
+    parser.add_argument('-e', '--show-only-edge', action='store_true',
+                        default=False, required=False,
+                        help='Only show the edge of the label image')
     args = parser.parse_args()
 
     if not operator.xor(bool(args.input_pair), bool(args.image)):
@@ -111,9 +115,12 @@ if __name__ == '__main__':
     # construct grid 
     slices = list()
     if args.input_pair:
+        if args.show_only_edge:
+            Renderer = ImageEdgeRenderer
+        else:
+            Renderer = ImagePairRenderer
         for image, label_image in args.input_pair:
-            ir = ImagePairRenderer(image, label_image, colors,
-                                   args.convert_colors)
+            ir = Renderer(image, label_image, colors, args.convert_colors)
             ir.rescale_image(args.min, args.max)
             for orient in sorted(slice_indices.keys()):
                 row = list()
