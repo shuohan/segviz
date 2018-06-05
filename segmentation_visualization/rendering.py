@@ -5,6 +5,7 @@
 """
 import nibabel as nib
 import numpy as np
+from scipy.ndimage.morphology import binary_erosion
 from PIL import Image, ImageColor
 
 from .image_processing import rescale_image_to_uint8, assign_colors
@@ -334,7 +335,7 @@ class ImagePairRenderer(ImageRenderer):
 
         """
         self._oriented_images[orient]['colored_label_image'] = assign_colors(
-            self._oriented_images[orient]['label_image'], self._colors)
+                self._oriented_images[orient]['label_image'], self._colors)
 
     def get_slice(self, orient, slice_id, alpha, width_zoom=1, height_zoom=1):
         """ Get a alpha-composition of a slice at an orientation
@@ -370,3 +371,33 @@ class ImagePairRenderer(ImageRenderer):
                                  height_zoom=height_zoom)
 
         return composition
+
+
+class ImageEdgeRenderer(ImagePairRenderer):
+    """ Render image and its corresponding label_image
+
+    Only the edge of each label mask is colored
+
+    Args: 
+
+    """
+    def __init__(self, image_path, label_image_path, colors,
+                 need_to_convert_colors=False, edge_width=1):
+        super().__init__(image_path, label_image_path, colors,
+                         need_to_convert_colors)
+        self.edge_width = edge_width
+
+    def assign_colors(self, orient):
+        """ Assign colors to label image along an orientation
+
+        Args:
+            orient (str): 'axial', 'coronal', 'sagittal'
+
+        """
+        label_image = self._oriented_images[orient]['label_image']
+        for label in np.unique(label_image):
+            mask = label_image == label
+            erosion = binary_erosion(mask, iterations=self.edge_width)
+            label_image[erosion] = 0
+        colored =  assign_colors( label_image, self._colors)
+        self._oriented_images[orient]['colored_label_image'] = colored

@@ -1,13 +1,18 @@
-from setuptools import setup
+from distutils.core import setup
+from glob import glob
+import subprocess
 
-setup(name='segmentation_visualization',
-      version='2.1.2',
-      description='Show the label image on top of the correspoing image',
+scripts = glob('scripts/*')
+command = ['git', 'describe', '--tags']
+version = subprocess.check_output(command).decode().strip()
+
+setup(name='segmentation-visualization',
+      version=version,
       author='Shuo Han',
+      description='Show the label image on top of the correspoing image',
       author_email='shuohanthu@gmail.com',
       url='https://github.com/Shuo-Han/segmentation-visualization',
       license='MIT',
       packages=['segmentation_visualization'],
-      install_requires=['nibabel', 'numpy', 'scipy', 'Pillow'],
-      scripts=['bin/interact_image', 'bin/show_slices',
-               'bin/create_checkerboard', 'bin/show_shapes'])
+      install_requires=['nibabel', 'numpy', 'scipy', 'Pillow', 'pyqt5'],
+      scripts=scripts)
