@@ -381,6 +381,12 @@ class ImageEdgeRenderer(ImagePairRenderer):
     Args: 
 
     """
+    def __init__(self, image_path, label_image_path, colors,
+                 need_to_convert_colors=False, edge_width=1):
+        super().__init__(image_path, label_image_path, colors,
+                         need_to_convert_colors)
+        self.edge_width = edge_width
+
     def assign_colors(self, orient):
         """ Assign colors to label image along an orientation
 
@@ -391,7 +397,7 @@ class ImageEdgeRenderer(ImagePairRenderer):
         label_image = self._oriented_images[orient]['label_image']
         for label in np.unique(label_image):
             mask = label_image == label
-            erosion = binary_erosion(mask)
+            erosion = binary_erosion(mask, iterations=self.edge_width)
             label_image[erosion] = 0
         colored =  assign_colors( label_image, self._colors)
         self._oriented_images[orient]['colored_label_image'] = colored

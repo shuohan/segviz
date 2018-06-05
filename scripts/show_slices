@@ -5,6 +5,7 @@ import argparse
 import operator
 import os
 import sys
+from functools import partial
 
 from segmentation_visualization.file_loading import load_colors
 from segmentation_visualization.rendering import ImageRenderer
@@ -94,6 +95,9 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--show-only-edge', action='store_true',
                         default=False, required=False,
                         help='Only show the edge of the label image')
+    parser.add_argument('-d', '--edge-width', type=int, default=1,
+                        help='Edge width of the label map if -e is specified')
+
     args = parser.parse_args()
 
     if not operator.xor(bool(args.input_pair), bool(args.image)):
@@ -116,7 +120,7 @@ if __name__ == '__main__':
     slices = list()
     if args.input_pair:
         if args.show_only_edge:
-            Renderer = ImageEdgeRenderer
+            Renderer = partial(ImageEdgeRenderer, edge_width=args.edge_width)
         else:
             Renderer = ImagePairRenderer
         for image, label_image in args.input_pair:
