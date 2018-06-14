@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import argparse
+
+desc = ('Convert a nii image to pictures of slices. If the image and the label '
+        'image are both given, the overlay is converted')
+parser = argparse.ArgumentParser(description=desc)
+parser.add_argument('-i', '--image', required=False, help='Image to convert')
+parser.add_argument('-p', '--image-pair', metavar=('IMAGE', 'LABEL_VOLUME'),
+                    help='Image and label image pair', required=False, nargs=2)
+help = ('A numpy file containing the colors of labels; the loaded colors '
+        'should be a num_colors x 3 array whose columns are R, G, B; the order '
+        'of the rows corresponds to the ascent of label values (check -r for '
+        'more details; the first label value (normally 0) corresponds to the '
+        'background whose color alpha will be set to 0 during conversion; '
+        'if `None`, a default colormap will be used. If -i is specified, '
+        'the colormap is applied to the image; if -p is specified the colormap '
+        'is applied to the label image.')
+parser.add_argument('-c', '--colormap', default=None, required=False, help=help)
+parser.add_argument('-a', '--alpha', help='Transparency of the label image',
+                    default=0.5, required=False, type=float)
+parser.add_argument('-v', '--view', choices=['axial', 'coronal', 'sagittal'],
+                    default='axial', help='The view to convert to')
+help = ('Min cutoff value of image, a value in [0, 1]; if the value is less '
+        'than 0, the intensity of an image is first scaled to this minimal '
+        'value and new values less than 0 will be set to zero.')
+parser.add_argument('-min', '--min', type=float, default=0, help=help)
+help = ('Max cutoff value of image, a value in [0, 1]; if the value is greater '
+        'than 1, the intensity of an image is first scaled to this maximal '
+        'value and new values greater than 1 will be set to 1.')
+parser.add_argument('-max', '--max', type=float, default=1, help=help)
+help = ('By default, the value of a label is directly the index of a color; in '
+        'case the colors is only stored in the order of the ascent of the '
+        'label values (for example, labels are 2, 5, 10, but there are only '
+        'three colors, we need to convert 2, 5, 10 to 0, 1, 2), use this '
+        'option to convert the colors array so that (2, 5, 10) rows of the new '
+        'array has the (0, 1, 2) rows of the original colors.')
+parser.add_argument('-r', '--convert-colors', action='store_true', help=help)
+parser.add_argument('-o', '--output', required=True, help='The output folder')
+parser.add_argument('-e', '--show-only-edge', action='store_true',
+                    default=False, help='Only show the edge of the label image')
+parser.add_argument('-d', '--edge-width', type=int, default=1,
+                    help='Edge width of the label map if -e is specified')
+args = parser.parse_args()
+
+import os
+import sys
+from functools import partial
+from PIL import Image
+
+from segmentation_visualization.file_loading import load_colors
+from segmentation_visualization.rendering import ImageRenderer
+from segmentation_visualization.rendering import ImagePairRenderer
+from segmentation_visualization.rendering import ImageEdgeRenderer
+from segmentation_visualization.rendering import get_default_colormap
+
+
+if not bool(args.image_pair) ^ bool(args.image):
+    raise RuntimeError('Only one of --image and --input-pair should be used.')
+
+if args.colormap is None:
+    colors = get_default_colormap()
+    print('--colors is not specified. Use default colormap instead.')
+else:
+    colors = load_colors(args.colormap)
+
+if not os.path.isdir(args.output):
+    os.makedirs(args.output)
+
+if args.image_pair:
+    if args.show_only_edge:
+        Renderer = partial(ImageEdgeRenderer, edge_width=args.edge_width)
+    else:
+        Renderer = ImagePairRenderer
+    ir = Renderer(*args.image_pair, colors, args.convert_colors)
+elif args.image:
+    ir = ImageRenderer(args.image)
+    ir.rescale_image(args.min, args.max)
+
+num_slices = ir.get_num_slices(args.view)
+num_digits = len(str(num_slices))
+for sind in range(num_slices):
+    filename = os.path.join(args.output, ('%%0%dd.png'%num_digits)%sind)
+    pic = ir.get_slice(args.view, sind, args.alpha)
+    pic.save(filename)
