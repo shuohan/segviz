@@ -76,7 +76,7 @@ if args.image_pair:
     ir = Renderer(*args.image_pair, colors, args.convert_colors)
 elif args.image:
     ir = ImageRenderer(args.image)
-    ir.rescale_image(args.min, args.max)
+ir.rescale_image(args.min, args.max)
 
 num_slices = ir.get_num_slices(args.view)
 num_digits = len(str(num_slices))
