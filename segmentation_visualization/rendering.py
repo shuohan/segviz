@@ -293,7 +293,7 @@ class ImagePairRenderer(ImageRenderer):
         self._affine = image_nib.affine
 
         label_image_nib = nib.load(label_image_path)
-        self._label_image = label_image_nib.get_data().astype(int)
+        self._label_image = np.round(label_image_nib.get_data()).astype(int)
         if need_to_convert_colors:
             colors = convert_colors(colors, np.unique(self._label_image))
         if colors.shape[1] == 3:
