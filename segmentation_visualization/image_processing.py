@@ -54,6 +54,18 @@ def rescale_image_to_uint8(image, min_val=MIN_UINT8, max_val=MAX_UINT8):
     return rescaled_image
 
 
+def quantile_scale(image, lower=0.05, upper=0.98):
+    lower_val = np.quantile(image, lower)
+    upper_val = np.quantile(image, upper)
+    slope = MAX_UINT8 / (upper_val - lower_val)
+    intercept = MAX_UINT8 * lower_val / (lower_val - upper_val)
+    scaled = slope * image + intercept
+    scaled[scaled>MAX_UINT8] = MAX_UINT8
+    scaled[scaled<MIN_UINT8] = MIN_UINT8
+    scaled = scaled.astype(np.uint8)
+    return scaled
+
+
 def assign_colors(label_image, colors):
     """Assign colors to a label image
 

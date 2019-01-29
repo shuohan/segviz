@@ -9,7 +9,7 @@ from scipy.ndimage.morphology import binary_erosion
 from PIL import Image, ImageColor
 
 from .image_processing import rescale_image_to_uint8, assign_colors
-from .image_processing import compose_image_and_labels
+from .image_processing import compose_image_and_labels, quantile_scale
 from .reslice import Reslicer
 
 MIN_UINT8 = 0
@@ -241,6 +241,11 @@ class ImageRenderer:
             if images['image'] is not None:
                 images['image'] = rescale_image_to_uint8(images['image'],
                                                          min_val, max_val)
+    def automatic_rescale(self):
+        self._image = quantile_scale(self._image)
+        for orient, images in self._oriented_images.items():
+            if images['image'] is not None:
+                images['image'] = quantile_scale(images['image'])
 
     def _trim_slice_id(self, orient, slice_id):
         """Trim the slice_id to [0, max_num_slices]
@@ -293,7 +298,7 @@ class ImagePairRenderer(ImageRenderer):
         self._affine = image_nib.affine
 
         label_image_nib = nib.load(label_image_path)
-        self._label_image = label_image_nib.get_data().astype(int)
+        self._label_image = np.round(label_image_nib.get_data()).astype(int)
         if need_to_convert_colors:
             colors = convert_colors(colors, np.unique(self._label_image))
         if colors.shape[1] == 3:
