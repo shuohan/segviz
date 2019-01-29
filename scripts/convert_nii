@@ -42,6 +42,8 @@ parser.add_argument('-e', '--show-only-edge', action='store_true',
                     default=False, help='Only show the edge of the label image')
 parser.add_argument('-d', '--edge-width', type=int, default=1,
                     help='Edge width of the label map if -e is specified')
+parser.add_argument('-q', '--quantile', default=False, action='store_true',
+                    help='Use quantile to automatically scale the image')
 args = parser.parse_args()
 
 import os
@@ -76,7 +78,10 @@ if args.image_pair:
     ir = Renderer(*args.image_pair, colors, args.convert_colors)
 elif args.image:
     ir = ImageRenderer(args.image)
-ir.rescale_image(args.min, args.max)
+if args.quantile:
+    ir.automatic_rescale()
+else:
+    ir.rescale_image(args.min, args.max)
 
 num_slices = ir.get_num_slices(args.view)
 num_digits = len(str(num_slices))

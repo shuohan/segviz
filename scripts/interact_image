@@ -63,6 +63,8 @@ if __name__ == '__main__':
                         help='the directory to store the the displayed image. '
                              'If None, pressing Enter will not save the image.',
                         default=None)
+    parser.add_argument('-q', '--quantile', default=False, action='store_true',
+                        help='Use quantile to automatically scale the image')
     args = parser.parse_args()
 
     if args.colors is None:
@@ -76,6 +78,7 @@ if __name__ == '__main__':
                          initial_alpha=args.alpha, orient=args.orientation,
                          initial_slice_idx=args.slice_idx,
                          need_to_convert_colors=args.convert_colors,
-                         output_dir=args.output_dir)
+                         output_dir=args.output_dir,
+                         quantile=args.quantile)
     window.show()
     sys.exit(app.exec_())

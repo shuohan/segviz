@@ -97,6 +97,8 @@ if __name__ == '__main__':
                         help='Only show the edge of the label image')
     parser.add_argument('-d', '--edge-width', type=int, default=1,
                         help='Edge width of the label map if -e is specified')
+    parser.add_argument('-q', '--quantile', default=False, action='store_true',
+                        help='Use quantile to automatically scale the image')
 
     args = parser.parse_args()
 
@@ -125,7 +127,10 @@ if __name__ == '__main__':
             Renderer = ImagePairRenderer
         for image, label_image in args.input_pair:
             ir = Renderer(image, label_image, colors, args.convert_colors)
-            ir.rescale_image(args.min, args.max)
+            if not args.quantile:
+                ir.rescale_image(args.min, args.max)
+            else:
+                ir.automatic_rescale()
             for orient in sorted(slice_indices.keys()):
                 row = list()
                 for si in slice_indices[orient]:
@@ -146,7 +151,10 @@ if __name__ == '__main__':
     elif args.image:
         for image in args.image:
             ir = ImageRenderer(image)
-            ir.rescale_image(args.min, args.max)
+            if not args.quantile:
+                ir.rescale_image(args.min, args.max)
+            else:
+                ir.automatic_rescale()
             for orient in sorted(slice_indices.keys()):
                 row = list()
                 for si in slice_indices[orient]:
