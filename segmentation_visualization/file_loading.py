@@ -29,14 +29,22 @@ def load_colors(colors_path):
 
     TODO:
         Add support for loading from .png file contaning a column of pixels
+
     """
     if not os.path.isfile(colors_path):
         raise IOError('The file %s does not exists' % colors_path)
     elif colors_path.endswith('.npy'): 
         colors = np.load(colors_path)
         colors = (MAX_UINT8 * colors).astype(np.uint8)
-    elif colors.path.endswith('.txt'):
-        pass
+    elif colors_path.endswith('.txt'): # ITK-SNAP format
+        with open(colors_path) as colors_file:
+            contents = [l.strip() for l in colors_file.readlines()
+                        if not l.strip().startswith('#')]
+        contents = np.array([list(map(int, c.split()[:5])) for c in contents])
+        colors = np.zeros((np.max(contents[:, 0]) + 1, 4))
+        colors[contents[:, 0], :3] = contents[:, 1:4]
+        colors[contents[:, 0], -1] = contents[:, -1] * MAX_UINT8
+        colors = colors.astype(np.uint8)
     else:
         raise IOError("The extesion of %s is not supported" % colors_path)
 
