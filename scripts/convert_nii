@@ -44,6 +44,8 @@ parser.add_argument('-d', '--edge-width', type=int, default=1,
                     help='Edge width of the label map if -e is specified')
 parser.add_argument('-q', '--quantile', default=False, action='store_true',
                     help='Use quantile to automatically scale the image')
+parser.add_argument('-l', '--affine', default=False, action='store_true',
+                    help='Use affine transformation into world coordination')
 args = parser.parse_args()
 
 import os
@@ -75,9 +77,10 @@ if args.image_pair:
         Renderer = partial(ImageEdgeRenderer, edge_width=args.edge_width)
     else:
         Renderer = ImagePairRenderer
-    ir = Renderer(*args.image_pair, colors, args.convert_colors)
+    ir = Renderer(*args.image_pair, colors, use_affine=args.affine,
+                  need_to_convert_colors=args.convert_colors)
 elif args.image:
-    ir = ImageRenderer(args.image)
+    ir = ImageRenderer(args.image, use_affine=args.affine)
 if args.quantile:
     ir.automatic_rescale()
 else:

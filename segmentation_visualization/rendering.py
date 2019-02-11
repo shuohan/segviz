@@ -150,15 +150,19 @@ class ImageRenderer:
     """Render image
 
     """
-    def __init__(self, image_path):
+    def __init__(self, image_path, use_affine=True):
         """
         Args:
             image_path (str): the path to the image
 
         """
         image_nib = nib.load(image_path)
+        self.use_affine = use_affine
         self._image = image_nib.get_data()
-        self._affine = image_nib.affine
+        if self.use_affine:
+            self._affine = image_nib.affine
+        else:
+            self._affine = image_nib.affine.round()
 
         self._oriented_images = {'axial': dict(image=None),
                                  'coronal': dict(image=None),
@@ -275,7 +279,7 @@ class ImagePairRenderer(ImageRenderer):
     Args: 
 
     """
-    def __init__(self, image_path, label_image_path, colors,
+    def __init__(self, image_path, label_image_path, colors, use_affine=True,
                  need_to_convert_colors=False):
         """
         Args:
@@ -294,8 +298,12 @@ class ImagePairRenderer(ImageRenderer):
 
         """
         image_nib = nib.load(image_path)
+        self.use_affine = use_affine
         self._image = image_nib.get_data()
-        self._affine = image_nib.affine
+        if use_affine:
+            self._affine = image_nib.affine
+        else:
+            self._affine = image_nib.affine.round()
 
         label_image_nib = nib.load(label_image_path)
         self._label_image = np.round(label_image_nib.get_data()).astype(int)
