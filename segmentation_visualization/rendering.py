@@ -394,9 +394,9 @@ class ImageEdgeRenderer(ImagePairRenderer):
     Args: 
 
     """
-    def __init__(self, image_path, label_image_path, colors,
+    def __init__(self, image_path, label_image_path, colors, use_affine=True,
                  need_to_convert_colors=False, edge_width=1):
-        super().__init__(image_path, label_image_path, colors,
+        super().__init__(image_path, label_image_path, colors, use_affine,
                          need_to_convert_colors)
         self.edge_width = edge_width
 
