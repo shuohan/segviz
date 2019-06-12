@@ -46,12 +46,20 @@ parser.add_argument('-q', '--quantile', default=False, action='store_true',
                     help='Use quantile to automatically scale the image')
 parser.add_argument('-l', '--affine', default=False, action='store_true',
                     help='Use affine transformation into world coordination')
+help = 'Print the range of slices containing the label image'
+parser.add_argument('-s', '--show-slice-range', default=False,
+                    action='store_true', help=help)
+help = ('The padding of the slice range to show. If the range is [10, 100], the'
+        ' padding is 5, the result range is [5, 105]')
+parser.add_argument('-sp', '--slice-range-padding', type=int, default=5,
+                    help=help)
 args = parser.parse_args()
 
 import os
 import sys
 from functools import partial
 from PIL import Image
+from image_processing_3d import calc_bbox3d
 
 from segmentation_visualization.file_loading import load_colors
 from segmentation_visualization.rendering import ImageRenderer
@@ -92,3 +100,14 @@ for sind in range(num_slices):
     filename = os.path.join(args.output, ('%%0%dd.png'%num_digits)%sind)
     pic = ir.get_slice(args.view, sind, args.alpha)
     pic.save(filename)
+
+if args.show_slice_range:
+    if args.image_pair is None:
+        print('Label image is not specified, cannot print slice range')
+    else:
+        label_image = ir._oriented_images[args.view]['label_image']
+        bbox = calc_bbox3d(label_image > 0)
+        slice_range = bbox[-1]
+        start = max(slice_range.start - args.slice_range_padding, 0)
+        stop = slice_range.stop + args.slice_range_padding
+        print(start, stop)
