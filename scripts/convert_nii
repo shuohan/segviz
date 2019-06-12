@@ -71,11 +71,12 @@ from segmentation_visualization.rendering import get_default_colormap
 if not bool(args.image_pair) ^ bool(args.image):
     raise RuntimeError('Only one of --image and --input-pair should be used.')
 
-if args.colormap is None:
-    colors = get_default_colormap()
-    print('--colors is not specified. Use default colormap instead.')
-else:
-    colors = load_colors(args.colormap)
+if args.image_pair is not None:
+    if args.colormap is None:
+        colors = get_default_colormap()
+        print('--colors is not specified. Use default colormap instead.')
+    else:
+        colors = load_colors(args.colormap)
 
 if not os.path.isdir(args.output):
     os.makedirs(args.output)
