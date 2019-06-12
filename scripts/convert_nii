@@ -74,7 +74,8 @@ if not bool(args.image_pair) ^ bool(args.image):
 if args.image_pair is not None:
     if args.colormap is None:
         colors = get_default_colormap()
-        print('--colors is not specified. Use default colormap instead.')
+        print('--colors is not specified. Use default colormap instead.',
+              file=sys.stderr)
     else:
         colors = load_colors(args.colormap)
 
@@ -104,7 +105,8 @@ for sind in range(num_slices):
 
 if args.show_slice_range:
     if args.image_pair is None:
-        print('Label image is not specified, cannot print slice range')
+        print('Label image is not specified, cannot print slice range',
+              file=sys.stderr)
     else:
         label_image = ir._oriented_images[args.view]['label_image']
         bbox = calc_bbox3d(label_image > 0)
