@@ -14,5 +14,5 @@ setup(name='segmentation-visualization',
       url='https://github.com/Shuo-Han/segmentation-visualization',
       license='MIT',
       packages=['segmentation_visualization'],
-      install_requires=['nibabel', 'numpy', 'scipy', 'Pillow', 'pyqt5'],
+      install_requires=['nibabel', 'numpy', 'scipy', 'Pillow'],
       scripts=scripts)
