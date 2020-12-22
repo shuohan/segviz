@@ -7,12 +7,12 @@ import os
 import sys
 from functools import partial
 
-from segmentation_visualization.file_loading import load_colors
-from segmentation_visualization.rendering import ImageRenderer
-from segmentation_visualization.rendering import ImagePairRenderer
-from segmentation_visualization.rendering import ImageEdgeRenderer
-from segmentation_visualization.rendering import concatenate_pils
-from segmentation_visualization.rendering import get_default_colormap
+from segviz.file_loading import load_colors
+from segviz.rendering import ImageRenderer
+from segviz.rendering import ImagePairRenderer
+from segviz.rendering import ImageEdgeRenderer
+from segviz.rendering import concatenate_pils
+from segviz.rendering import get_default_colormap
 
 from PIL import Image
 

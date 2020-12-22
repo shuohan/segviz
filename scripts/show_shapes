@@ -13,7 +13,7 @@ args = parser.parse_args()
 
 import nibabel as nib
 
-from segmentation_visualization.reslice import Reslicer
+from segviz.reslice import Reslicer
 
 
 obj = nib.load(args.image)

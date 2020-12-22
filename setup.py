@@ -6,13 +6,13 @@ scripts = glob('scripts/*')
 command = ['git', 'describe', '--tags']
 version = subprocess.check_output(command).decode().strip()
 
-setup(name='segmentation-visualization',
+setup(name='segviz',
       version=version,
       author='Shuo Han',
-      description='Show the label image on top of the correspoing image',
+      description='Show the label image on top of the corresponding image.',
       author_email='shuohanthu@gmail.com',
-      url='https://github.com/Shuo-Han/segmentation-visualization',
+      url='https://github.com/shuohan/segviz',
       license='MIT',
-      packages=['segmentation_visualization'],
+      packages=['segviz'],
       install_requires=['nibabel', 'numpy', 'scipy', 'Pillow'],
       scripts=scripts)
