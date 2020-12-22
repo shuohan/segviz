@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-"""Utilities for simple image processing
-
-"""
 import numpy as np
 from PIL import Image
 
@@ -10,107 +5,62 @@ from PIL import Image
 MIN_UINT8 = 0
 MAX_UINT8 = 255
 
-def rescale_image_to_uint8(image, min_val=MIN_UINT8, max_val=MAX_UINT8):
-    """Rescale image to the specified uint8 range
-
-    Linearly rescale an image to the range [min_val, max_val]. This range should
-    be within [0, 255] for a uint8 image. This can be viewed as applying a
-    simple histogram tranform:
-          -----
-         /
-        /
-    ___/
-
-    Args:
-        image (numpy array): The image to rescale
-        min_val (uint8): The result minial intensity value; >= 0
-        max_val (uint8): The result maximal intensity value; <= 255
-
-    Returns:
-        rescaled_image (numpy array): The rescaled image
-
-    """
-    MIN_UINT8 = 0
-    MAX_UINT8 = 255
-
-    image = image.astype(float)
-    orig_min = np.min(image)
-    orig_max = np.max(image)
-
-    # rescale to [0, 1] first
-    rescaled_image = (image - orig_min) / (orig_max - orig_min)
-
-    # rescale to [min_val, max_val]
-    min_val = float(min_val)
-    max_val = float(max_val)
-    rescaled_image = rescaled_image * (max_val - min_val) + min_val
-
-    # cut off values out of [MIN_UINT8, MAX_UINT8]
-    rescaled_image[rescaled_image>MAX_UINT8] = MAX_UINT8
-    rescaled_image[rescaled_image<MIN_UINT8] = MIN_UINT8
-
-    rescaled_image = rescaled_image.astype(np.uint8)
-
-    return rescaled_image
-
-
-def quantile_scale(image, lower=0.05, upper=0.98):
-    lower_val = np.quantile(image, lower)
-    upper_val = np.quantile(image, upper)
-    slope = MAX_UINT8 / (upper_val - lower_val)
-    intercept = MAX_UINT8 * lower_val / (lower_val - upper_val)
-    scaled = slope * image + intercept
-    scaled[scaled>MAX_UINT8] = MAX_UINT8
-    scaled[scaled<MIN_UINT8] = MIN_UINT8
-    scaled = scaled.astype(np.uint8)
-    return scaled
-
 
 def assign_colors(label_image, colors):
-    """Assign colors to a label image
+    """Assigns colors to a label image.
 
-    The values of `label_image` are corresponding to the row indices of the
-    array colors. The 0 values of `label_image` is assumed to be background so
-    the first row of `colors` has 0 alpha.  
+    Note:
+        * The values of ``label_image`` correspond to the row indices of the
+          array colors.
+        * The 0 values of ``label_image`` is assumed to be background, so
+          the first row of ``colors`` is forced to be an alpha value of 0.  
 
     Args:
-        label_image (int numpy array): Can be 3D or 2D.
-        colors (num_colors x 4 (rgba) numpy array): The colors array. The number
-            of colors should be greater than the maximal label value. The first
-            colors is assumed to be background and the alphs is set to zero.
+        label_image (numpy.ndarray[int]): The label image to assign colors to.
+            It can be a 3D or 2D array.
+        colors (numpy.ndarray): The colors array. Each row is the RGB value of
+            the corresponding label value. The number of colors should be
+            greater than the maximal label value. The first colors is assumed to
+            be background and its alpha is set to zero.
 
     Returns:
-        colorful_label_image (uint8 numpy array): The last dimension is rgba.
+        numpy.ndarray[uint8]: The label image with colors. The last dimension
+            with a size of 4is the color value of RGBA. The other dimensions
+            have the same shape with the input ``label_image``.
 
     Raises:
-        RuntimeError: If the shape of the colors is not num_colors x 4 (rgba)
+        RuntimeError: The shape of the ``colors`` is not ``num_colors x 4``
+            (RGBA).
 
     """
     if colors.shape[1] != 4:
         color_shape = ' x '.join([str(s)for s in colors.shape])
         raise RuntimeError('The shape of the colors should be num_colors x 4 '
-                           '(rgba). Instead, shape %s is used.' % color_shape)
+                           '(RGBA). Instead, shape %s is used.' % color_shape)
     colors[0, 3] = 0 # background alpha
+    label_image = np.round(label_image).astype(int)
     colorful_label_image = colors[label_image, :]
     return colorful_label_image
 
 
 def compose_image_and_labels(image, label_image, alpha):
-    """Compose image and a label image
+    """Composes an 2D image and its corresponding label image.
     
-    Alpha composition of `image` and the corresponding `label_image`
-    (segmentation or parcellation). `label_image` is a rgba array and `image`
-    will be rendered as a grayscale image. `alpha` will be applied to
-    `label_image`.
+    Alpha composition of ``image`` and its ``label_image`` (segmentation or
+    parcellation). ``label_image`` is a RGBA array and ``image`` will be
+    rendered as a grayscale image. The value ``alpha`` is applied to
+    ``label_image``.
 
     Args:
-        image (dim1 x dim2 unit8 numpy image)
-        label_image (dim1 x dim2 x 4 (rgba) unit8 numpy image)
-        alpha (float): The alpha value of labels. Should be in [0, 1] and the
-        function will scale it to [0, 255].
+        image (numpy.ndarray[uint8]): The 2D image to compose.
+        label_image (numpy.ndarray): The label image to compose. The first two
+            dimensions have the same shape with ``image`` and the last dimension
+            has a size of 4 and contains RGBA values.
+        alpha (float): The alpha value of labels. It should be in [0, 1] and
+            this function will automatically scale the apha values to [0, 255].
 
     Returns:
-        composite_image (2D PIL image)
+        PIL.Image: The alpha-composed image.
 
     """
     label_image = np.copy(label_image)
@@ -122,13 +72,13 @@ def compose_image_and_labels(image, label_image, alpha):
 
 
 def convert_grayscale_image_to_pil(image):
-    """Convert a 2D grayscale image to PIL image
+    """Converts a 2D grayscale image into a PIL image.
 
     Args:
-        image (dim1 x dim2 uint8 numpy array):
+        image (numpy.ndarray[uint8]): The image to convert.
 
     Returns:
-        image_pil (2D PIL image)
+        PIL.Image: The converted image.
 
     """
     image = np.repeat(image[:, :, None], 3, 2)
