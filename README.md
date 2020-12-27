@@ -1,27 +1,23 @@
-# Segmentation Visualization 
+# Medical Image Segmentation Visualization
 
-## Introduction
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-This little tool can show the segmentation label image on top of the corresponding image. It aims to run smoothly using SSH X11 forwarding and provide simple controls of image navigation and flexible configuration. 
+Show alpha-composition of an image slice and its corresponding label image.
 
-## Usage
+![image](docs/source/_static/image.png) ![pair](docs/source/_static/pair.png) ![edge](docs/source/_static/edge.png)
 
-The tool provides two executables `show_slices` and `interact_image`.
+Three modes are supported:
 
-`show_slices` can display multiple images, orientations (axial, coronal, and sagittal), and slices simultaneously on a grid.
+* Show only the image
+* Show an alpha-composite of the image and its label image
+* Show only the outer edges of each label region
 
-`interact_image` uses PyQt to interactively navigate through orientations and slices of a single image. Pressing `Up` and `Down` arrow keys can scroll through slices, pressing `Left` and `Right` arrow keys can change alpha value of labels, pressing `[` and `]` will change the image orientation (axial, coronal, and sagittal), and pressing `Enter` key will save the current slice in the window to a .png file.
+Users can adjust:
 
-The colormap and alpha value of the label image can be configured.
+* The intensity scales of the image
+* The alpha value of the composition
+* The edge width of the label image
 
-Check `show_slices --help` and `interact_image --help` for more details.
+Use [improc3d](https://gitlab.com/shan-utils/improc3d) to transform a brain image into its axial, coronal, and sagittal views.
 
-## Examples
-
-The following command show 10th, 20th, and 30th axial slices, 10th and 20th coronal slices, 10th, 20th, and 30th sagittal slices of two images `image1.nii.gz` and `image2.nii.gz`. It uses the colormap contained in the file `colors.npy`, and alpha value 0.5. `-r` means remapping the colormap using the available labels in the label images.
-
-    ./show_slices -p image1.nii.gz labels1.nii.gz -p image2.nii.gz labels2.nii.gz -as 10 20 30 -cs 10 20 -ss 10 20 30 -c colors.npy -r -a 0.5
-
-The following command show `image.nii.gz` with its label image `labels.nii.gz` in a window. Pressing `Enter` will save the file to `./{image_filename}_orient_{orient}_slice_{slice_idx}.png`.
-
-    ./interact_image -i image.nii.gz -l labels.nii.gz -o ./ --colors colors.npy -r
+See the [documentation](https://shan-utils.gitlab.io/segviz) for more details.

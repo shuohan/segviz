@@ -25,9 +25,10 @@ def assign_colors(label_image, colors):
             be background and its alpha is set to zero.
 
     Returns:
-        numpy.ndarray[uint8]: The label image with colors. The last dimension
-            with a size of 4is the color value of RGBA. The other dimensions
-            have the same shape with the input ``label_image``.
+        numpy.ndarray[uint8]:
+        The label image with colors. The last dimension
+        with a size of 4is the color value of RGBA. The other dimensions
+        have the same shape with the input ``label_image``.
 
     Raises:
         RuntimeError: The shape of the ``colors`` is not ``num_colors x 4``
@@ -141,6 +142,7 @@ def get_default_colormap():
         numpy.ndarray[uint8]: The num_colors x 3 (RGB) colors.
 
     """
+    background = [  0,   0,   0]
     tab_blue =   [  0, 120, 177]
     tab_orange = [255, 126,  42]
     tab_green =  [  0, 160,  58]
@@ -151,9 +153,9 @@ def get_default_colormap():
     tab_gray =   [127, 127, 127]
     tab_olive =  [187, 189,  60]
     tab_cyan =   [  0, 190, 205]
-    return np.array([tab_blur, tab_orange, tab_green, tab_red, tab_purple,
-                     tab_brown, tab_pink, tab_gray, tab_olive, tab_cyan],
-                    dtype=np.uint8)
+    return np.array([background, tab_blue, tab_orange, tab_green, tab_red,
+                     tab_purple, tab_brown, tab_pink, tab_gray, tab_olive,
+                     tab_cyan], dtype=np.uint8)
 
 
 def append_alpha_column(colors):

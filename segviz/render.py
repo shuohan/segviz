@@ -39,7 +39,7 @@ class ImageRenderer:
     def slice_size(self):
         """Returns the width and height of image slices."""
         width = self.image.shape[1]
-        height = self.images.shape[0]
+        height = self.image.shape[0]
         return width, height
 
     @property
@@ -99,7 +99,7 @@ class ImagePairRenderer(ImageRenderer):
 
     Attributes:
         label_image (numpy.ndarray): The corresponding label image. It should
-            have the same spatial shape with ``image``.
+            have the same spatial shape with :attr:`image`.
         colors (numpy.ndarray): The num_colors x 4 RGBA colors array.
         alpha (float): The alpha value of the label image.
 
