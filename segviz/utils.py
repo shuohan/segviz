@@ -127,10 +127,11 @@ def reindex_colors(colors, labels):
         numpy.ndarray: The reindexed colors.
 
     """
-    label_set = np.unique(np.round(labels).astype(int))
+    label_set = np.unique(np.round(labels).astype(int))[1:] # remove bg color
     new_colors_shape = (np.max(label_set) + 1, colors.shape[1])
     new_colors = np.zeros(new_colors_shape, dtype=np.uint8)
-    indices = np.mod(np.arange(len(label_set), dtype=int), colors.shape[0])
+    num_colors = colors.shape[0] - 1
+    indices = np.mod(np.arange(len(label_set), dtype=int), num_colors) + 1
     new_colors[label_set, :] = colors[indices, :]
     return new_colors
 

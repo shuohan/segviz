@@ -1,6 +1,14 @@
 Examples
 ========
 
+Use the command line tool
+-------------------------
+
+.. code-block:: bash
+
+   ./convert_nii -h # print help
+   ./convert_nii -p image.nii.gz label.nii.gz -c colormap.txt -v coronal -o results -q -a 0.5 -l
+
 Show only the image
 -------------------
 

@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 from scipy.ndimage.morphology import binary_erosion
-from improc3d import quantile_scale
+from improc3d import quantile_scale, calc_bbox3d
 
 from .utils import MIN_UINT8, MAX_UINT8
 from .utils import assign_colors, compose_image_and_labels
@@ -27,7 +27,7 @@ class ImageRenderer:
     def __init__(self, image):
         self.image = image
         self._rescaled = image
-        self.automatic_rescale()
+        self.rescale_intensity()
 
     def automatic_rescale(self):
         """Rescales the image automatically. Works fine for T1w brain images."""
@@ -131,6 +131,12 @@ class ImagePairRenderer(ImageRenderer):
         comp = compose_image_and_labels(image_slice, label_slice, self.alpha)
         comp = comp.transpose(Image.TRANSPOSE)
         return comp
+
+    def get_label_range(self):
+        """Returns the index range of slices with non-background labels."""
+        bbox = calc_bbox3d(self.label_image > 0)
+        slice_range = bbox[-1]
+        return slice_range.start, slice_range.stop
 
 
 class ImageEdgeRenderer(ImagePairRenderer):
