@@ -1,6 +1,8 @@
 Medical Image Segmentation Visualization
 ========================================
 
+Code is `here <https://gitlab.com/shan-utils/segviz>`_.
+
 Show alpha-composition of an image slice and its corresponding label image.
 
 .. image:: _static/image.png
