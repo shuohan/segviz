@@ -8,7 +8,7 @@ pages:
   - cd docs/
   - sphinx-build source build
   - cd -
-  - mv docs/build/html public/
+  - mv docs/build public/
   artifacts:
     paths:
     - public
