@@ -61,11 +61,11 @@ from functools import partial
 from PIL import Image
 from image_processing_3d import calc_bbox3d
 
-from segmentation_visualization.file_loading import load_colors
-from segmentation_visualization.rendering import ImageRenderer
-from segmentation_visualization.rendering import ImagePairRenderer
-from segmentation_visualization.rendering import ImageEdgeRenderer
-from segmentation_visualization.rendering import get_default_colormap
+from segviz.file_loading import load_colors
+from segviz.rendering import ImageRenderer
+from segviz.rendering import ImagePairRenderer
+from segviz.rendering import ImageEdgeRenderer
+from segviz.rendering import get_default_colormap
 
 
 if not bool(args.image_pair) ^ bool(args.image):
