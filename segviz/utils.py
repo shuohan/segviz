@@ -103,14 +103,14 @@ def reindex_colors(colors, labels):
     For example, colors
 
     .. code-block:: text
-        
+
         [[255,   0,   0, 255],
          [  0, 255,   0, 255]]
 
     will be converted into
 
     .. code-block:: text
-        
+
         [[255,   0,   0, 255],
          [  0,   0,   0,   0],
          [  0, 255,   0, 255],
@@ -136,7 +136,7 @@ def reindex_colors(colors, labels):
 
 def get_default_colormap():
     """Returns the matplotlib's tab10 colormap.
-    
+
     Returns:
         numpy.ndarray[uint8]: The num_colors x 3 (RGB) colors.
 
@@ -257,7 +257,7 @@ def load_colors(colors_path, mode=1):
 
     Returns:
         numpy.ndarray: The loaded colors with shape num_colors x 4 RBGA.
-    
+
     Raises:
         IOError: The file does not exist.
         ValueError: The input argument ``mode`` is not 1 or 255.

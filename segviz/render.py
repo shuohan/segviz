@@ -1,285 +1,163 @@
-# -*- coding: utf-8 -*-
-
-"""Functions about rendering
-
-"""
-import nibabel as nib
 import numpy as np
+from PIL import Image
 from scipy.ndimage.morphology import binary_erosion
-from PIL import Image, ImageColor
+from improc3d import quantile_scale
 
-from .image_processing import rescale_image_to_uint8, assign_colors
-from .image_processing import compose_image_and_labels, quantile_scale
-from .reslice import Reslicer
+from .utils import MIN_UINT8, MAX_UINT8
+from .utils import assign_colors, compose_image_and_labels
 
-MIN_UINT8 = 0
-MAX_UINT8 = 255
 
 class ImageRenderer:
-    """Render image
+    """Renders slices from a 3D image using PIL.
+
+    Note:
+        The 3rd dimension is used as the slice dimension. Use `improc3d
+        <https://github.com/shuohan/improc3d>`_ to reslice the image.
+
+        >>> from improc3d import transform_to_sagittal
+        >>> sagittal = transform_to_sagittal(image, lpim_affine)
+        >>> renderer = ImageRenderer(sagittal)
+        >>> print('Number of slices', len(renderer))
+        >>> sag_slice = renderer[100]
+
+    Attributes:
+        image (numpy.ndarray): The image to render.
 
     """
-    def __init__(self, image_path, use_affine=True):
-        """
-        Args:
-            image_path (str): the path to the image
+    def __init__(self, image):
+        self.image = image
+        self._rescaled = image
+        self.automatic_rescale()
 
-        """
-        image_nib = nib.load(image_path)
-        self.use_affine = use_affine
-        self._image = image_nib.get_data()
-        if self.use_affine:
-            self._affine = image_nib.affine
-        else:
-            self._affine = image_nib.affine.round()
+    def automatic_rescale(self):
+        """Rescales the image automatically. Works fine for T1w brain images."""
+        self._rescaled = quantile_scale(self.image, lower_th=MIN_UINT8,
+                                        upper_th=MAX_UINT8)
+        self._rescaled = self._rescaled.astype(np.uint8)
 
-        self._oriented_images = {'axial': dict(image=None),
-                                 'coronal': dict(image=None),
-                                 'sagittal': dict(image=None)}
-
-        self.rescale_image(0, 1)
-
-    def get_slice(self, orient, slice_id, width_zoom=1, height_zoom=1):
-        """ Get a alpha-composition of a slice at an orientation
-
-        Args:
-            orient (str): {'axial', 'coronal', 'sagittal'}
-            slice_id (int)
-            width_zoom (float > 0): The scaling factor of width
-            height_zoom (float > 0): The scaling factor of height
-                
-                The width/height ratio is unchanged, the final size is
-                determined by width_zoom and height_zoom together
-
-        Returns:
-            image (PIL image): The selected slice of the image
-
-        """
-        oriented_images = self._oriented_images[orient]
-        if oriented_images['image'] is None:
-            self.initialize_oriented_images(orient)
-        slice_id = self._trim_slice_id(orient, slice_id)
-        image = oriented_images['image'][:, :, slice_id]
-        image = Image.fromarray(image, 'L')
-        return image
-
-    def initialize_oriented_images(self, orient):
-        """ Initialize images along an orientation
-        
-        Args:
-            orient (str): 'axial', 'coronal', 'sagittal'
-
-        """
-        image_reslicer = Reslicer(self._image, self._affine, order=1)
-        self._oriented_images[orient]['image'] = image_reslicer.to_view(orient)
-
-    def get_num_slices(self, orient):
-        """Get the number of slices along an orientation
-
-        Args:
-            orient (str): 'axial', 'coronal', 'sagittal'
-
-        """
-        if self._oriented_images[orient]['image'] is None:
-            self.initialize_oriented_images(orient)
-        return self._oriented_images[orient]['image'].shape[2]
-
-    def get_slice_size(self, orient):
-        """Get the width and height of slices along an orientation
-
-        Args:
-            orient (str): 'axial', 'coronal', 'sagittal'
-
-        """
-        if self._oriented_images[orient]['image'] is None:
-            self.initialize_oriented_images(orient)
-        width = self._oriented_images[orient]['image'].shape[1] 
-        height = self._oriented_images[orient]['image'].shape[0] 
+    @property
+    def slice_size(self):
+        """Returns the width and height of image slices."""
+        width = self.image.shape[1]
+        height = self.images.shape[0]
         return width, height
 
-    def rescale_image(self, min_val, max_val):
-        """Rescale image intensity to [min_val, max_val]
+    @property
+    def intensity_range(self):
+        """Returns the value range of the image intensities ``[vmin, vmax]``."""
+        vmin = np.min(self.image)
+        vmax = np.max(self.image)
+        return vmin, vmax
 
-        Other details see function rescale_image_to_uint8
-
-        Args:
-            min_val (float >= 0): The lower limit of the intensity
-            max_val (float <= 1): The upper limit of the intensity
-
-        """
-        min_val = min_val * MAX_UINT8
-        max_val = max_val * MAX_UINT8
-        self._image = rescale_image_to_uint8(self._image, min_val, max_val)
-        for orient, images in self._oriented_images.items():
-            if images['image'] is not None:
-                images['image'] = rescale_image_to_uint8(images['image'],
-                                                         min_val, max_val)
-    def automatic_rescale(self):
-        self._image = quantile_scale(self._image)
-        for orient, images in self._oriented_images.items():
-            if images['image'] is not None:
-                images['image'] = quantile_scale(images['image'])
-
-    def _trim_slice_id(self, orient, slice_id):
-        """Trim the slice_id to [0, max_num_slices]
+    def rescale_intensity(self, vmin=None, vmax=None):
+        """Rescales image intensity into ``[vmin, vmax]``.
 
         Args:
-            slice_id (int): The index of the slice to show
+            vmin (float): Any values below ``vmin`` are set to 0.
+            vmax (float): Any values above ``vmax`` are set to 255.
 
-        Returns:
-            slice_id (int): Trimed index
-            
         """
-        max_num_slices = self.get_num_slices(orient) 
-        if slice_id < 0:
-            slice_id = 0
-        elif slice_id >= max_num_slices:
-            slice_id = max_num_slices - 1
-        return slice_id
+        int_range = self.intensity_range
+        vmin = int_range[0] if vmin is None else vmin
+        vmax = int_range[1] if vmax is None else vmax
+
+        self._rescaled = self.image.copy()
+        self._rescaled[self._rescaled < vmin] = vmin
+        self._rescaled[self._rescaled > vmax] = vmax
+        self._rescaled = (self._rescaled - vmin) / (vmax - vmin)
+        self._rescaled = self._rescaled * (MAX_UINT8 - MIN_UINT8) + MIN_UINT8
+        self._rescaled = self._rescaled.astype(np.uint8)
+
+    def __len__(self):
+        return self.image.shape[-1]
+
+    def __getitem__(self, ind):
+        ind = self._check_slice_ind(ind)
+        image_slice = self._rescaled[:, :, ind]
+        image_slice = Image.fromarray(image_slice, 'L')
+        image_slice = image_slice.transpose(Image.TRANSPOSE)
+        return image_slice
+
+    def _check_slice_ind(self, ind):
+        if ind < 0:
+            ind = 0
+            print('Slice index should not be less than {}.'.format(ind))
+        if ind > len(self) - 1:
+            ind = len(self) - 1
+            print('Slice index should not be greater than {}.'.format(ind))
+        return ind
 
 
 class ImagePairRenderer(ImageRenderer):
-    """ Render image and its corresponding label_image
+    """Renders image and its corresponding label image as an alpha-composite.
 
-    This class takes an 3D image and its label image as inputs. By setting alpha
-    and slice index, it can output a alpha-composed 2D slice. This class can
-    also handle orientation.
+    Note:
+        The attribute :attr:`label_image` will be converted into a "colored"
+        image by assigning :attr:`colors` to its label values. As the input,
+        it should have the same shape with :attr:`image`; after conversion, it
+        will have a 4th dimension as the colors.
 
-    Args: 
+    Attributes:
+        label_image (numpy.ndarray): The corresponding label image. It should
+            have the same spatial shape with ``image``.
+        colors (numpy.ndarray): The num_colors x 4 RGBA colors array.
+        alpha (float): The alpha value of the label image.
 
     """
-    def __init__(self, image_path, label_image_path, colors, use_affine=True,
-                 need_to_convert_colors=False):
-        """
-        Args:
-            image_path (str): the path to the image
-            label_image_path (str): the path to the corresponding label image
-            colors (num_colors x 4 (rbga) numpy array): num_colors should be
-                larger than or equal to the maxmimal label value
-                row is assumed to be background so the alpha should be 0
-            need_to_convert_colors (bool): By default, the value of a label is
-                directly the index of a color; in case the colors is only stored
-                in the order of the ascent of the label values (for example,
-                labels are 2, 5, 10, but there are only three colors, we need to
-                convert 2, 5, 10 to 0, 1, 2), use this option to convert the
-                colors array so that (2, 5, 10) rows of the new array has the
-                (0, 1, 2) rows of the original colors
+    def __init__(self, image, label_image, colors, alpha=1.0):
+        assert image.shape == label_image.shape
+        super().__init__(image)
+        self._alpha = alpha
+        self.colors = colors
+        self.label_image = label_image
+        self._assign_colors()
 
-        """
-        image_nib = nib.load(image_path)
-        self.use_affine = use_affine
-        self._image = image_nib.get_data()
-        if use_affine:
-            self._affine = image_nib.affine
-        else:
-            self._affine = image_nib.affine.round()
+    @property
+    def alpha(self):
+        return self._alpha
 
-        label_image_nib = nib.load(label_image_path)
-        self._label_image = np.round(label_image_nib.get_data()).astype(int)
-        if need_to_convert_colors:
-            colors = convert_colors(colors, np.unique(self._label_image))
-        if colors.shape[1] == 3:
-            colors = add_alpha_column(colors)
-        elif colors.shape[1] != 4:
-            color_shape = ' x '.join([str(s)for s in colors.shape])
-            raise RuntimeError('The colors should be num_colors x 3 (rgb) or '
-                               'num_colors x 4 (rgba) array. Instead, a shape '
-                               '%s is used.' % color_shape)
-        self._colors = colors
+    @alpha.setter
+    def alpha(self, value):
+        self._alpha = value
+        self._assign_colors()
 
-        self._oriented_images = {'axial': dict(image=None, label_image=None,
-                                               colored_label_image=None),
-                                 'coronal': dict(image=None, label_image=None,
-                                                 colored_label_image=None),
-                                 'sagittal': dict(image=None, label_image=None,
-                                                  colored_label_image=None)}
+    def _assign_colors(self):
+        self._colored_label_image = assign_colors(self.label_image, self.colors)
 
-        self.rescale_image(0, 1)
-
-    def initialize_oriented_images(self, orient):
-        """ Initialize images along an orientation
-        
-        Args:
-            orient (str): 'axial', 'coronal', 'sagittal'
-
-        """
-        image_reslicer = Reslicer(self._image, self._affine, order=1)
-        label_reslicer = Reslicer(self._label_image, self._affine, order=0)
-        oriented_images = self._oriented_images[orient]
-        oriented_images['image'] = image_reslicer.to_view(orient)
-        oriented_images['label_image'] = label_reslicer.to_view(orient)
-
-    def assign_colors(self, orient):
-        """ Assign colors to label image along an orientation
-
-        Args:
-            orient (str): 'axial', 'coronal', 'sagittal'
-
-        """
-        self._oriented_images[orient]['colored_label_image'] = assign_colors(
-                self._oriented_images[orient]['label_image'], self._colors)
-
-    def get_slice(self, orient, slice_id, alpha, width_zoom=1, height_zoom=1):
-        """ Get a alpha-composition of a slice at an orientation
-
-        Args:
-            orient (str): {'axial', 'coronal', 'sagittal'}
-            slice_id (int)
-            alpha (float): [0, 1]
-            width_zoom (float > 0): The scaling factor of width
-            height_zoom (float > 0): The scaling factor of height
-                
-                The width/height ratio is unchanged, the final size is
-                determined by width_zoom and height_zoom together
-
-        Returns:
-            composite_slice (PIL image): alpha-composite 2D image slice
-
-        """
-        oriented_images = self._oriented_images[orient]
-        if oriented_images['image'] is None:
-            self.initialize_oriented_images(orient)
-
-        slice_id = self._trim_slice_id(orient, slice_id)
-        image = oriented_images['image'][:, :, slice_id]
-
-        if oriented_images['colored_label_image'] is None:
-            self.assign_colors(orient)
-        label_image = oriented_images['colored_label_image'][:, :, slice_id]
-        label_image = np.squeeze(label_image)
-
-        composition = compose_image_and_labels(image, label_image, alpha)
-        composition = resize_pil(composition, width_zoom=width_zoom,
-                                 height_zoom=height_zoom)
-
-        return composition
+    def __getitem__(self, ind):
+        ind = self._check_slice_ind(ind)
+        image_slice = self._rescaled[:, :, ind]
+        label_slice = self._colored_label_image[:, :, ind, :]
+        comp = compose_image_and_labels(image_slice, label_slice, self.alpha)
+        comp = comp.transpose(Image.TRANSPOSE)
+        return comp
 
 
 class ImageEdgeRenderer(ImagePairRenderer):
-    """ Render image and its corresponding label_image
+    """Renders an image and the outside contours (edge) of each labeled region.
 
-    Only the edge of each label mask is colored
-
-    Args: 
+    Attributes:
+        edge_width (int): The width of the edge as the number of pixels.
 
     """
-    def __init__(self, image_path, label_image_path, colors, use_affine=True,
-                 need_to_convert_colors=False, edge_width=1):
-        super().__init__(image_path, label_image_path, colors, use_affine,
-                         need_to_convert_colors)
-        self.edge_width = edge_width
+    def __init__(self, image, label_image, colors, alpha=1, edge_width=1):
+        self._edge_width = edge_width
+        super().__init__(image, label_image, colors, alpha)
 
-    def assign_colors(self, orient):
-        """ Assign colors to label image along an orientation
+    @property
+    def edge_width(self):
+        return self._edge_width
 
-        Args:
-            orient (str): 'axial', 'coronal', 'sagittal'
+    @edge_width.setter
+    def edge_width(self, width):
+        self._edge_width = width
+        self._assign_colors()
 
-        """
-        label_image = self._oriented_images[orient]['label_image']
+    def _assign_colors(self):
+        """Only assigns the colors to the outside contours (edges)."""
+        label_image = self.label_image.copy()
         for label in np.unique(label_image):
             mask = label_image == label
             erosion = binary_erosion(mask, iterations=self.edge_width)
             label_image[erosion] = 0
-        colored =  assign_colors( label_image, self._colors)
-        self._oriented_images[orient]['colored_label_image'] = colored
+        self._colored_label_image = assign_colors(label_image, self.colors)
