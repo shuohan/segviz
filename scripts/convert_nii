@@ -61,6 +61,8 @@ parser.add_argument('-s', '--show-slice-range', action='store_true', help=help)
 help = 'Only show the slices with non-background labels.'
 parser.add_argument('-S', '--only-show-label-slices',
                     action='store_true', help=help)
+parser.add_argument('-t', '--slice-step', default=1, type=int,
+                    help='Show every this number of slices.')
 
 help = 'The number of extra non-labeled slices to show when -S is used.'
 parser.add_argument('-E', '--num-extra-slices', type=int, default=1, help=help)
@@ -152,7 +154,7 @@ if args.show_slice_range:
 
 num_slices = len(renderer)
 num_digits = len(str(num_slices))
-slice_range = range(num_slices)
+slice_range = range(0, num_slices, args.slice_step)
 if args.only_show_label_slices:
     if args.label_image is None:
         print('Label image is not specified. Cannot show label slices.',
@@ -161,7 +163,7 @@ if args.only_show_label_slices:
         start, stop = renderer.get_label_range()
         start = max(start - args.num_extra_slices, 0)
         stop = min(stop + args.num_extra_slices, len(renderer))
-        slice_range = range(start, stop)
+        slice_range = range(start, stop, args.slice_step)
 
 args.output = Path(args.output)
 if args.concat:
