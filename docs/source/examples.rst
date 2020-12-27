@@ -7,7 +7,7 @@ Use the command line tool
 .. code-block:: bash
 
    ./convert_nii -h # print help
-   ./convert_nii -p image.nii.gz label.nii.gz -c colormap.txt -v coronal -o results -q -a 0.5 -l
+   ./convert_nii -i image.nii.gz -l label.nii.gz -c colormap.txt -v coronal -o results -q -a 0.5 -A
 
 Show only the image
 -------------------
