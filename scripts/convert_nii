@@ -54,8 +54,16 @@ help = ('Use affine transformation into world coordination. Otherwise, the'
         'almost isotropic and not very oblique.)')
 parser.add_argument('-A', '--use-affine', action='store_true', help=help)
 
-help = 'Print the range of slices containing the label image.'
+help = ('Print the range of slices containing the label image. '
+        'Note that the stop is the index of the last slice + 1.')
 parser.add_argument('-s', '--show-slice-range', action='store_true', help=help)
+
+help = 'Only show the slices with non-background labels.'
+parser.add_argument('-S', '--only-show-label-slices',
+                    action='store_true', help=help)
+
+help = 'The number of extra non-labeled slices to show when -S is used.'
+parser.add_argument('-E', '--num-extra-slices', type=int, default=1, help=help)
 
 args = parser.parse_args()
 
@@ -129,7 +137,19 @@ else:
 
 num_slices = len(renderer)
 num_digits = len(str(num_slices))
-for s_ind in range(num_slices):
+slice_range = range(num_slices)
+
+if args.only_show_label_slices:
+    if args.label_image is None:
+        print('Label image is not specified. Cannot show label slices.',
+              file=sys.stderr)
+    else:
+        start, stop = renderer.get_label_range()
+        start = max(start - args.num_extra_slices, 0)
+        stop = min(stop + args.num_extra_slices, len(renderer))
+        slice_range = range(start, stop)
+
+for s_ind in slice_range:
     filename = args.output.joinpath(('%%0%dd.png' % num_digits) % s_ind)
     pic = renderer[s_ind]
     pic.save(filename)

@@ -21,6 +21,9 @@ Users can adjust:
 * The alpha value of the composition
 * The edge width of the label image
 
+This package also provides a command line tool to convert a NIfTI image into PNG
+slices.
+
 
 .. toctree::
    :maxdepth: 2
