@@ -71,6 +71,8 @@ def test_render():
     im.save(dirname.joinpath('pair_sag.png'))
     assert renderer.slice_size == (182, 218)
 
+    assert renderer.get_label_range() == (42, 136)
+
 
 if __name__ == '__main__':
     test_render()
