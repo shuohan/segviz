@@ -14,7 +14,7 @@ parser.add_argument('-l', '--label-image',
 
 help = ('The colormap to load. It should be .txt or .npy. See '
         'segviz.load_colors for more details of the file format. It only has '
-        'affect when using the -p option to show the overlay.')
+        'affect when using the -l option to show the overlay.')
 parser.add_argument('-c', '--colormap', default=None, required=False, help=help)
 
 parser.add_argument('-a', '--alpha', default=0.5, type=float,
@@ -65,10 +65,20 @@ parser.add_argument('-S', '--only-show-label-slices',
 help = 'The number of extra non-labeled slices to show when -S is used.'
 parser.add_argument('-E', '--num-extra-slices', type=int, default=1, help=help)
 
+help = 'Concatenate slices into a single .png file as a row/column.' 
+parser.add_argument('-C', '--concat', action='store_true', help=help)
+parser.add_argument('-p', '--padding-size', default=0, type=int,
+                    help='The size of padding when use -C.')
+parser.add_argument('-P', '--padding-color',
+                    type=int, nargs=4, default=[0, 0, 0, 255],
+                    help='The padding color (0..255 RGBA) when use -C.')
+parser.add_argument('-R', '--concat-as-row', action='store_true',
+                    help='Show the slices as a row when use -C.')
+
 args = parser.parse_args()
 
+
 import sys
-from functools import partial
 import nibabel as nib
 import numpy as np
 from PIL import Image
@@ -79,7 +89,7 @@ from improc3d import transform_to_coronal
 from improc3d import transform_to_sagittal
 from segviz.render import ImageRenderer, ImagePairRenderer, ImageEdgeRenderer
 from segviz.utils import get_default_colormap, load_colors, append_alpha_column
-from segviz.utils import reindex_colors
+from segviz.utils import reindex_colors, concat_pils
 
 
 if args.label_image is not None:
@@ -91,9 +101,6 @@ if args.label_image is not None:
         colors = load_colors(args.colormap)
     if colors.shape[1] == 3:
         colors = append_alpha_column(colors)
-
-args.output = Path(args.output)
-args.output.mkdir(exist_ok=True, parents=True)
 
 if args.view == 'axial':
     transform = transform_to_axial
@@ -135,10 +142,17 @@ if args.quantile:
 else:
     renderer.rescale_intensity(args.vmin, args.vmax)
 
+if args.show_slice_range:
+    if args.label_image is None:
+        print('Label image is not specified. Cannot print label range.',
+              file=sys.stderr)
+    else:
+        start, stop = renderer.get_label_range()
+        print(start, stop)
+
 num_slices = len(renderer)
 num_digits = len(str(num_slices))
 slice_range = range(num_slices)
-
 if args.only_show_label_slices:
     if args.label_image is None:
         print('Label image is not specified. Cannot show label slices.',
@@ -149,15 +163,18 @@ if args.only_show_label_slices:
         stop = min(stop + args.num_extra_slices, len(renderer))
         slice_range = range(start, stop)
 
-for s_ind in slice_range:
-    filename = args.output.joinpath(('%%0%dd.png' % num_digits) % s_ind)
-    pic = renderer[s_ind]
+args.output = Path(args.output)
+if args.concat:
+    pics = [[renderer[s_ind]] for s_ind in slice_range]
+    if args.concat_as_row:
+        pics = list(zip(*pics))
+    pic = concat_pils(pics, bg_color=args.padding_color)
+    filename = args.output.with_suffix('.png')
     pic.save(filename)
 
-if args.show_slice_range:
-    if args.label_image is None:
-        print('Label image is not specified. Cannot print label range.',
-              file=sys.stderr)
-    else:
-        start, stop = renderer.get_label_range()
-        print(start, stop)
+else:
+    args.output.mkdir(exist_ok=True, parents=True)
+    for s_ind in slice_range:
+        filename = args.output.joinpath(('%%0%dd.png' % num_digits) % s_ind)
+        pic = renderer[s_ind]
+        pic.save(filename)
