@@ -12,7 +12,7 @@ desc = ('Run a web service in the background, and the html contents can be \n'
         '    ssh -L 5000:localhost:5000 server_address\n\n'
         'then access the page using a remote web browser.\n')
 parser = argparse.ArgumentParser(description=desc, formatter_class=Formatter)
-parser.add_argument('-i', '--input-dir', help='The directory of html to run.')
+parser.add_argument('input_dir', help='The directory of html to run.')
 parser.add_argument('-p', '--port', default=5000, type=int,
                     help='The localhost port if run flask.')
 

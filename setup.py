@@ -7,7 +7,7 @@ with open(os.path.join(dir, 'README.md')) as f:
     long_description = f.read()
 
 setup(name='segviz',
-      version='3.1.0',
+      version='3.1.1',
       author='Shuo Han',
       description='Show the image and label image overlay.',
       long_description=long_description,

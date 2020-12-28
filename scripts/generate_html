@@ -47,25 +47,29 @@ for row in contents:
         label_fn = '{}_label.png'.format(view)
         label_fn = args.output_dir.joinpath('images', row[0], label_fn)
         label_fn = str(label_fn.resolve())
-        label_cmd = [convert, '-i', row[1], '-l', row[2], '-v', view, '-q',
-                     '-a', str(args.alpha), '-S', '-C', '-R',
-                     '-t', str(args.slice_step), '-o', label_fn, '-s']
-        if args.colormap is not None and Path(args.colormap).exists():
-            label_cmd.extend(['-c', args.colormap])
-        else:
-            label_cmd.append('-r')
-        print(' '.join(label_cmd))
-        proc = subprocess.run(label_cmd, capture_output=True)
-        slice_range = str(proc.stdout, 'utf-8').strip().split()
 
         image_fn = '{}_image.png'.format(view)
         image_fn = args.output_dir.joinpath('images', row[0], image_fn)
         image_fn = str(image_fn.resolve())
-        image_cmd = [convert, '-i', row[1], '-v', view, '-q', '-S', '-C', '-R',
-                     '-t', str(args.slice_step), '-o', image_fn,
-                     '-n', *slice_range]
-        print(' '.join(image_cmd))
-        proc = subprocess.run(image_cmd, capture_output=True)
+
+        if not Path(label_fn).exists() or not Path(image_fn).exists():
+
+            label_cmd = [convert, '-i', row[1], '-l', row[2], '-v', view, '-q',
+                         '-a', str(args.alpha), '-S', '-C', '-R',
+                         '-t', str(args.slice_step), '-o', label_fn, '-s']
+            if args.colormap is not None and Path(args.colormap).exists():
+                label_cmd.extend(['-c', args.colormap])
+            else:
+                label_cmd.append('-r')
+            print(' '.join(label_cmd))
+            proc = subprocess.run(label_cmd, capture_output=True)
+            slice_range = str(proc.stdout, 'utf-8').strip().split()
+
+            image_cmd = [convert, '-i', row[1], '-v', view, '-q', '-S', '-C',
+                         '-R', '-t', str(args.slice_step), '-o', image_fn,
+                         '-n', *slice_range]
+            print(' '.join(image_cmd))
+            proc = subprocess.run(image_cmd, capture_output=True)
 
 
 names = [c[0] for c in contents]
