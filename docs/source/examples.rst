@@ -1,8 +1,8 @@
 Examples
 ========
 
-Use the command line tool
--------------------------
+Use the command line tools
+--------------------------
 
 Convert NIfTI images:
 
@@ -25,6 +25,21 @@ The input ``list.csv`` to ``generate_html`` should be formated as a .csv file:
    name1,path/to/image1.nii.gz,path/to/label1.nii.gz
    name2,path/to/image2.nii.gz,path/to/label2.nii.gz
    name3,path/to/image3.nii.gz,path/to/label3.nii.gz
+
+A screenshot of the generated web page:
+
+.. image:: _static/screenshot.png
+
+.. admonition:: Tips
+
+   * Use ``shift + mouse wheel`` to scroll horizontally.
+   * Use ``ctrl + mouse wheel`` to zoom in/out.
+
+.. warning::
+
+   ``generate_html`` calls ``convert_nii`` to generate the pictures. However,
+   if a picture has already been generated, this command will skip it.
+   Therefore, delete the old files if you want to generate new ones.
 
 Run a web service:
 
