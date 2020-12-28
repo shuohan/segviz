@@ -28,6 +28,14 @@ This package also provides command line tools to
 * Run a web service to view the HTML file remotely
 
 
+Install
+-------
+
+.. code-block:: bash
+
+   pip install segviz
+
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

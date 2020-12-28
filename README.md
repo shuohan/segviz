@@ -21,3 +21,9 @@ Users can adjust:
 Use [improc3d](https://gitlab.com/shan-utils/improc3d) to transform a brain image into its axial, coronal, and sagittal views.
 
 See the [documentation](https://shan-utils.gitlab.io/segviz) for more details.
+
+### Install
+
+```bash
+pip install segviz
+```
