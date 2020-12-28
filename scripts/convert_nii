@@ -6,25 +6,32 @@ desc = ('Convert a nii image to pictures of slices. If the image and the label '
         'image are both given, their overlay is converted')
 formatter = argparse.ArgumentDefaultsHelpFormatter
 parser = argparse.ArgumentParser(description=desc, formatter_class=formatter)
-parser.add_argument('-i', '--image', help='The image to convert.')
-parser.add_argument('-p', '--image-pair', metavar=('IMAGE', 'LABEL_VOLUME'),
-                    help='The image and label image pair.', nargs=2)
+
+parser.add_argument('-i', '--image', required=True,
+                    help='The image to convert.')
+parser.add_argument('-l', '--label-image',
+                    help='The corresponding label image.')
+
 help = ('The colormap to load. It should be .txt or .npy. See '
         'segviz.load_colors for more details of the file format. It only has '
-        'affect when using the -p option to show the overlay.')
+        'affect when using the -l option to show the overlay.')
 parser.add_argument('-c', '--colormap', default=None, required=False, help=help)
-parser.add_argument('-a', '--alpha', default=0.5, type=float,
+
+parser.add_argument('-a', '--alpha', default=1.0, type=float,
                     help='The transparency of the label image.')
 parser.add_argument('-v', '--view', choices=['axial', 'coronal', 'sagittal'],
                     default='axial', help='The view to convert into.')
+
 help = ('Min cutoff percentage of image intensities. Any intensties less than '
         'or equal to this value is set to 0. If None, use the minimum '
         'of the image.')
 parser.add_argument('-m', '--vmin', type=float, default=None, help=help)
+
 help = ('Max cutoff percentage of image intensities. Any intensties greater '
         'than or equal to this value is set to 255. If None, use the maximum'
         'of the image.')
 parser.add_argument('-M', '--vmax', type=float, default=None, help=help)
+
 help = ('By default, the value of a label is directly the index of a color; in '
         'case the colors is only stored in the order of the ascent of the '
         'label values (for example, labels are 2, 5, 10, but there are only '
@@ -32,6 +39,7 @@ help = ('By default, the value of a label is directly the index of a color; in '
         'option to convert the colors array so that (2, 5, 10) rows of the new '
         'array has the (0, 1, 2) rows of the original colors.')
 parser.add_argument('-r', '--reindex-colors', action='store_true', help=help)
+
 parser.add_argument('-o', '--output', required=True, help='The output folder.')
 parser.add_argument('-e', '--show-only-edge', action='store_true',
                     help='Only show the edges of each label region.')
@@ -39,17 +47,42 @@ parser.add_argument('-d', '--edge-width', type=int, default=1,
                     help='Edge width of the label map if -e is specified.')
 parser.add_argument('-q', '--quantile', default=False, action='store_true',
                     help='Use quantiles to automatically scale the image.')
+
 help = ('Use affine transformation into world coordination. Otherwise, the'
         'orientation is roughly inferenced and requires the affine matrix read '
         'from the nifti is close to an permutation matrix (voxel size are '
         'almost isotropic and not very oblique.)')
-parser.add_argument('-l', '--use-affine', action='store_true', help=help)
-help = 'Print the range of slices containing the label image.'
+parser.add_argument('-A', '--use-affine', action='store_true', help=help)
+
+help = ('Print the range of slices containing the label image. '
+        'Note that the stop is the index of the last slice + 1.')
 parser.add_argument('-s', '--show-slice-range', action='store_true', help=help)
+
+help = 'Only show the slices with non-background labels.'
+parser.add_argument('-S', '--only-show-label-slices',
+                    action='store_true', help=help)
+parser.add_argument('-t', '--slice-step', default=1, type=int,
+                    help='Show every this number of slices.')
+
+help = 'The number of extra non-labeled slices to show when -S is used.'
+parser.add_argument('-E', '--num-extra-slices', type=int, default=0, help=help)
+
+help = 'Concatenate slices into a single .png file as a row/column.' 
+parser.add_argument('-C', '--concat', action='store_true', help=help)
+parser.add_argument('-p', '--padding-size', default=0, type=int,
+                    help='The size of padding when use -C.')
+parser.add_argument('-P', '--padding-color',
+                    type=int, nargs=4, default=[0, 0, 0, 255],
+                    help='The padding color (0..255 RGBA) when use -C.')
+parser.add_argument('-R', '--concat-as-row', action='store_true',
+                    help='Show the slices as a row when use -C.')
+parser.add_argument('-n', '--slice-range', type=int, default=None, nargs=2,
+                    help='The slice range to show.')
+
 args = parser.parse_args()
 
+
 import sys
-from functools import partial
 import nibabel as nib
 import numpy as np
 from PIL import Image
@@ -60,14 +93,10 @@ from improc3d import transform_to_coronal
 from improc3d import transform_to_sagittal
 from segviz.render import ImageRenderer, ImagePairRenderer, ImageEdgeRenderer
 from segviz.utils import get_default_colormap, load_colors, append_alpha_column
-from segviz.utils import reindex_colors
+from segviz.utils import reindex_colors, concat_pils
 
 
-if not bool(args.image_pair) ^ bool(args.image):
-    message = 'One and only one of --image and --input-pair should be used.'
-    raise RuntimeError(message)
-
-if args.image_pair is not None:
+if args.label_image is not None:
     if args.colormap is None:
         colors = get_default_colormap()
         print('--colors is not specified. Use default colormap instead.',
@@ -77,9 +106,6 @@ if args.image_pair is not None:
     if colors.shape[1] == 3:
         colors = append_alpha_column(colors)
 
-args.output = Path(args.output)
-args.output.mkdir(exist_ok=True)
-
 if args.view == 'axial':
     transform = transform_to_axial
 elif args.view == 'coronal':
@@ -88,20 +114,16 @@ elif args.view == 'sagittal':
     transform = transform_to_sagittal
 coarse = not args.use_affine
 
-if args.image is not None:
-    obj = nib.load(args.image)
-    image = obj.get_fdata(dtype=np.float32)
-    affine = obj.affine
-    image = transform(image, affine, order=1, coarse=coarse)
+obj = nib.load(args.image)
+image = obj.get_fdata(dtype=np.float32)
+affine = obj.affine
+image = transform(image, affine, order=1, coarse=coarse)
+
+if args.label_image is None:
     renderer = ImageRenderer(image)
 
-elif args.image_pair is not None:
-    obj = nib.load(args.image_pair[0])
-    image = obj.get_fdata(dtype=np.float32)
-    affine = obj.affine
-    image = transform(image, affine, order=1, coarse=coarse)
-
-    label = nib.load(args.image_pair[1]).get_fdata(dtype=np.float32)
+else:
+    label = nib.load(args.label_image).get_fdata(dtype=np.float32)
     label = np.round(label).astype(int)
     label = transform(label, affine, order=0, coarse=coarse)
 
@@ -124,17 +146,50 @@ if args.quantile:
 else:
     renderer.rescale_intensity(args.vmin, args.vmax)
 
-num_slices = len(renderer)
-num_digits = len(str(num_slices))
-for s_ind in range(num_slices):
-    filename = args.output.joinpath(('%%0%dd.png' % num_digits) % s_ind)
-    pic = renderer[s_ind]
-    pic.save(filename)
-
 if args.show_slice_range:
-    if args.image_pair is None:
+    if args.label_image is None:
         print('Label image is not specified. Cannot print label range.',
               file=sys.stderr)
     else:
         start, stop = renderer.get_label_range()
+        start = max(start - args.num_extra_slices, 0)
+        stop = min(stop + args.num_extra_slices, len(renderer))
         print(start, stop)
+
+num_slices = len(renderer)
+num_digits = len(str(num_slices))
+if args.slice_range is not None:
+    start = max(args.slice_range[0], 0)
+    stop = min(args.slice_range[1], len(renderer))
+    slice_range = range(start, stop, args.slice_step)
+else:
+    slice_range = range(0, num_slices, args.slice_step)
+
+if args.only_show_label_slices:
+    if args.slice_range is not None:
+        print('Show the labeled slices. Override -n.', file=sys.stderr)
+    if args.label_image is None:
+        print('Label image is not specified. Cannot show label slices.',
+              file=sys.stderr)
+    else:
+        start, stop = renderer.get_label_range()
+        start = max(start - args.num_extra_slices, 0)
+        stop = min(stop + args.num_extra_slices, len(renderer))
+        slice_range = range(start, stop, args.slice_step)
+
+args.output = Path(args.output)
+if args.concat:
+    pics = [[renderer[s_ind]] for s_ind in slice_range]
+    if args.concat_as_row:
+        pics = list(zip(*pics))
+    pic = concat_pils(pics, bg_color=args.padding_color)
+    args.output.parent.mkdir(exist_ok=True, parents=True)
+    filename = args.output.with_suffix('.png')
+    pic.save(filename)
+
+else:
+    args.output.mkdir(exist_ok=True, parents=True)
+    for s_ind in slice_range:
+        filename = args.output.joinpath(('%%0%dd.png' % num_digits) % s_ind)
+        pic = renderer[s_ind]
+        pic.save(filename)

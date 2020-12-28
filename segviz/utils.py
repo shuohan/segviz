@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 from pathlib import Path
+import importlib.resources
 
 
 MIN_UINT8 = 0
@@ -205,19 +206,19 @@ def concat_pils(images, bg_color=[0, 0, 0, 0]):
     heights = np.array(heights)
     max_widths_per_col = np.max(widths, axis=0)
     max_heights_per_row = np.max(heights, axis=1)
-    grid_width = np.sum(max_widths_per_column)
+    grid_width = np.sum(max_widths_per_col)
     grid_height = np.sum(max_heights_per_row)
 
-    result = Image.new('RGBA', (width, height), color=bg_color)
+    result = Image.new('RGBA', (grid_width, grid_height), color=tuple(bg_color))
 
     width_offset = 0
     height_offset = 0
     for image_row, row_height in zip(images, max_heights_per_row):
-        for image, col_weight in zip(image_row, max_widths_per_col):
+        for image, col_width in zip(image_row, max_widths_per_col):
             image_width, image_height = image.size
-            width_pad = int((col_weight - image_width) / 2)
+            width_pad = int((col_width - image_width) / 2)
             height_pad = int((row_height - image_height) / 2)
-            offset = (weight_offset + weight_pad, height_offset + height_pad)
+            offset = (width_offset + width_pad, height_offset + height_pad)
             result.paste(image, offset)
             width_offset += col_width
         width_offset = 0

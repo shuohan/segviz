@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+
+import argparse
+
+class Formatter(argparse.ArgumentDefaultsHelpFormatter,
+                argparse.RawDescriptionHelpFormatter): pass
+desc = ('Show segmentation overlays in a .html file. Example input file:\n\n'
+        '    name1,path/to/image1.nii.gz,path/to/label1.nii.gz\n'
+        '    name2,path/to/image2.nii.gz,path/to/label2.nii.gz\n'
+        '    name3,path/to/image3.nii.gz,path/to/label3.nii.gz')
+parser = argparse.ArgumentParser(description=desc, formatter_class=Formatter)
+
+parser.add_argument('-i', '--input-list', required=True,
+                    help='The input file of a list of images to show.')
+parser.add_argument('-o', '--output-dir', required=True,
+                    help='The output folder.')
+parser.add_argument('-a', '--alpha', default=1.0, type=float,
+                    help='The transparency of the label image.')
+parser.add_argument('-t', '--slice-step', default=5, type=int,
+                    help='Show every this number of slices.')
+help = ('The colormap to load. It should be .txt or .npy. See '
+        'segviz.load_colors for more details of the file format. It only has '
+        'affect when using the -l option to show the overlay.')
+parser.add_argument('-c', '--colormap', default=None, required=False, help=help)
+
+args = parser.parse_args()
+
+
+import csv
+import subprocess
+from jinja2 import Template
+from pathlib import Path
+
+from segviz import read_template
+
+
+args.output_dir = Path(args.output_dir)
+args.output_dir.mkdir(exist_ok=True, parents=True)
+
+with open(args.input_list) as csvfile:
+    contents = list(csv.reader(csvfile))
+
+print('Generate slices...')
+convert = str(Path(__file__).parent.resolve().joinpath('convert_nii'))
+for row in contents:
+    for view in ['axial', 'coronal', 'sagittal']:
+        label_fn = '{}_label.png'.format(view)
+        label_fn = args.output_dir.joinpath('images', row[0], label_fn)
+        label_fn = str(label_fn.resolve())
+        label_cmd = [convert, '-i', row[1], '-l', row[2], '-v', view, '-q',
+                     '-a', str(args.alpha), '-S', '-C', '-R',
+                     '-t', str(args.slice_step), '-o', label_fn, '-s']
+        if args.colormap is not None and Path(args.colormap).exists():
+            label_cmd.extend(['-c', args.colormap])
+        else:
+            label_cmd.append('-r')
+        print(' '.join(label_cmd))
+        proc = subprocess.run(label_cmd, capture_output=True)
+        slice_range = str(proc.stdout, 'utf-8').strip().split()
+
+        image_fn = '{}_image.png'.format(view)
+        image_fn = args.output_dir.joinpath('images', row[0], image_fn)
+        image_fn = str(image_fn.resolve())
+        image_cmd = [convert, '-i', row[1], '-v', view, '-q', '-S', '-C', '-R',
+                     '-t', str(args.slice_step), '-o', image_fn,
+                     '-n', *slice_range]
+        print(' '.join(image_cmd))
+        proc = subprocess.run(image_cmd, capture_output=True)
+
+
+names = [c[0] for c in contents]
+template = Template(read_template())
+page = template.render(title='segviz', names=names)
+
+with open(args.output_dir.joinpath('index.html'), 'w') as html:
+    html.write(page)
