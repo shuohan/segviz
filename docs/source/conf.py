@@ -22,7 +22,7 @@ copyright = '2020, Shuo Han'
 author = 'Shuo Han'
 
 # The full version, including alpha/beta/rc tags
-release = '3.1.1'
+release = '3.1.2'
 
 
 # -- General configuration ---------------------------------------------------
