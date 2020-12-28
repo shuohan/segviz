@@ -2,8 +2,8 @@ import os
 from glob import glob
 from setuptools import setup, find_packages
 
-dir = os.path.abspath(path.dirname(__file__))
-with open(path.join(dir, 'README.md')) as f:
+dir = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(dir, 'README.md')) as f:
     long_description = f.read()
 
 setup(name='segviz',
