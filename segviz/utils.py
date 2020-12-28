@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 from pathlib import Path
+import importlib.resources
 
 
 MIN_UINT8 = 0

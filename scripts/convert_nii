@@ -17,7 +17,7 @@ help = ('The colormap to load. It should be .txt or .npy. See '
         'affect when using the -l option to show the overlay.')
 parser.add_argument('-c', '--colormap', default=None, required=False, help=help)
 
-parser.add_argument('-a', '--alpha', default=0.5, type=float,
+parser.add_argument('-a', '--alpha', default=1.0, type=float,
                     help='The transparency of the label image.')
 parser.add_argument('-v', '--view', choices=['axial', 'coronal', 'sagittal'],
                     default='axial', help='The view to convert into.')
@@ -65,7 +65,7 @@ parser.add_argument('-t', '--slice-step', default=1, type=int,
                     help='Show every this number of slices.')
 
 help = 'The number of extra non-labeled slices to show when -S is used.'
-parser.add_argument('-E', '--num-extra-slices', type=int, default=1, help=help)
+parser.add_argument('-E', '--num-extra-slices', type=int, default=0, help=help)
 
 help = 'Concatenate slices into a single .png file as a row/column.' 
 parser.add_argument('-C', '--concat', action='store_true', help=help)
@@ -76,6 +76,8 @@ parser.add_argument('-P', '--padding-color',
                     help='The padding color (0..255 RGBA) when use -C.')
 parser.add_argument('-R', '--concat-as-row', action='store_true',
                     help='Show the slices as a row when use -C.')
+parser.add_argument('-n', '--slice-range', type=int, default=None, nargs=2,
+                    help='The slice range to show.')
 
 args = parser.parse_args()
 
@@ -150,12 +152,22 @@ if args.show_slice_range:
               file=sys.stderr)
     else:
         start, stop = renderer.get_label_range()
+        start = max(start - args.num_extra_slices, 0)
+        stop = min(stop + args.num_extra_slices, len(renderer))
         print(start, stop)
 
 num_slices = len(renderer)
 num_digits = len(str(num_slices))
-slice_range = range(0, num_slices, args.slice_step)
+if args.slice_range is not None:
+    start = max(args.slice_range[0], 0)
+    stop = min(args.slice_range[1], len(renderer))
+    slice_range = range(start, stop, args.slice_step)
+else:
+    slice_range = range(0, num_slices, args.slice_step)
+
 if args.only_show_label_slices:
+    if args.slice_range is not None:
+        print('Show the labeled slices. Override -n.', file=sys.stderr)
     if args.label_image is None:
         print('Label image is not specified. Cannot show label slices.',
               file=sys.stderr)
@@ -171,6 +183,7 @@ if args.concat:
     if args.concat_as_row:
         pics = list(zip(*pics))
     pic = concat_pils(pics, bg_color=args.padding_color)
+    args.output.parent.mkdir(exist_ok=True, parents=True)
     filename = args.output.with_suffix('.png')
     pic.save(filename)
 
