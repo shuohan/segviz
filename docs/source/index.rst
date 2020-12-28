@@ -21,8 +21,11 @@ Users can adjust:
 * The alpha value of the composition
 * The edge width of the label image
 
-This package also provides a command line tool to convert a NIfTI image into PNG
-slices.
+This package also provides command line tools to
+
+* Convert a NIfTI image into PNG slices
+* Generate an HTML file of a group of images
+* Run a web service to view the HTML file remotely
 
 
 .. toctree::

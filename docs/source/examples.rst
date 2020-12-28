@@ -4,10 +4,42 @@ Examples
 Use the command line tool
 -------------------------
 
+Convert NIfTI images:
+
 .. code-block:: bash
 
-   ./convert_nii -h # print help
-   ./convert_nii -i image.nii.gz -l label.nii.gz -c colormap.txt -v coronal -o results -q -a 0.5 -A
+   convert_nii -h # print help
+   convert_nii -i image.nii.gz -l label.nii.gz -c colormap.txt -v coronal -o results -q -a 0.5 -A
+
+Generate an HTML file of many segmentations:
+
+.. code-block:: bash
+
+   generate_html -h # print help
+   generate_html -i list.csv -o html_dir
+
+The input ``list.csv`` to ``generate_html`` should be formated as a .csv file:
+
+.. code-block:: text
+
+   name1,path/to/image1.nii.gz,path/to/label1.nii.gz
+   name2,path/to/image2.nii.gz,path/to/label2.nii.gz
+   name3,path/to/image3.nii.gz,path/to/label3.nii.gz
+
+Run a web service:
+
+.. code-block:: bash
+
+   run_html -i html_dir
+
+This page can be viewed at ``localhost:5000`` in a web browser. Or use ``ssh``
+to bind the port to view remotely:
+
+.. code-block:: bash
+
+    ssh -L 5000:localhost:5000 server_address
+
+Then the web page can be viewed **locally** at ``localhost:5000``.
 
 Show only the image
 -------------------
@@ -101,7 +133,7 @@ format:
 Get a default colormap
 ----------------------
 
-.. doctest:: 
+.. doctest::
 
    >>> from segviz import get_default_colormap, append_alpha_column
    >>> colormap = append_alpha_column(get_default_colormap())
