@@ -45,7 +45,7 @@ Run a web service:
 
 .. code-block:: bash
 
-   run_html -i html_dir
+   run_html html_dir
 
 This page can be viewed at ``localhost:5000`` in a web browser. Or use ``ssh``
 to bind the port to view remotely:
