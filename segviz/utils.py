@@ -196,8 +196,8 @@ def concat_pils(images, bg_color=[0, 0, 0, 0]):
         PIL.Image: The concatenated image grid.
 
     """
-    widths = [[im.size[1] for im in image] for image in images]
-    heights = [[im.size[0] for im in image] for image in images]
+    widths = [[im.size[0] for im in image] for image in images]
+    heights = [[im.size[1] for im in image] for image in images]
 
     if len(widths) == 0 or len(heights) == 0:
         return Image.new('RGB', (0, 0))
@@ -206,6 +206,7 @@ def concat_pils(images, bg_color=[0, 0, 0, 0]):
     heights = np.array(heights)
     max_widths_per_col = np.max(widths, axis=0)
     max_heights_per_row = np.max(heights, axis=1)
+
     grid_width = np.sum(max_widths_per_col)
     grid_height = np.sum(max_heights_per_row)
 
