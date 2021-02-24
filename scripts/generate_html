@@ -22,6 +22,8 @@ help = ('The colormap to load. It should be .txt or .npy. See '
         'segviz.load_colors for more details of the file format. It only has '
         'affect when using the -l option to show the overlay.')
 parser.add_argument('-c', '--colormap', default=None, required=False, help=help)
+parser.add_argument('-A', '--use-affine', action='store_true',
+                    help='Use affine matrix to transform the image.')
 
 args = parser.parse_args()
 
@@ -57,6 +59,9 @@ for row in contents:
             label_cmd = [convert, '-i', row[1], '-l', row[2], '-v', view, '-q',
                          '-a', str(args.alpha), '-S', '-C', '-R',
                          '-t', str(args.slice_step), '-o', label_fn, '-s']
+            if args.use_affine:
+                label_cmd.append('-A')
+
             if args.colormap is not None and Path(args.colormap).exists():
                 label_cmd.extend(['-c', args.colormap])
             else:
@@ -68,6 +73,9 @@ for row in contents:
             image_cmd = [convert, '-i', row[1], '-v', view, '-q', '-S', '-C',
                          '-R', '-t', str(args.slice_step), '-o', image_fn,
                          '-n', *slice_range]
+            if args.use_affine:
+                image_cmd.append('-A')
+
             print(' '.join(image_cmd))
             proc = subprocess.run(image_cmd, capture_output=True)
 
