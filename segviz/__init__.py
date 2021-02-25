@@ -13,11 +13,12 @@ __all__ = ['ImageRenderer', 'ImagePairRenderer', 'ImageEdgeRenderer',
 
 import importlib.resources
 
-def read_template():
+def read_template(image_only=False):
     """Loads a html template for jinja.
 
     Returns:
         str: The loaded template.
 
     """
-    return importlib.resources.read_text(__name__, 'template.html')
+    html = 'image_template.html' if image_only else 'template.html'
+    return importlib.resources.read_text(__name__, html)

@@ -1,4 +1,5 @@
 include README.md
 include LICENSE.txt
 include segviz/template.html
+include segviz/image_template.html
 recursive-include docs/source/_static *.png
