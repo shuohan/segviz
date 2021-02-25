@@ -103,6 +103,6 @@ for row in contents:
 
 names = [c[0] for c in contents]
 template = Template(read_template(image_only))
-page = template.render(title='segviz', names=names)
+page = template.render(title='segviz', names=names, views=args.views)
 with open(args.output_dir.joinpath('index.html'), 'w') as html:
     html.write(page)
