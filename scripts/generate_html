@@ -24,6 +24,8 @@ help = ('The colormap to load. It should be .txt or .npy. See '
 parser.add_argument('-c', '--colormap', default=None, required=False, help=help)
 parser.add_argument('-V', '--views', default=['axial', 'coronal', 'sagittal'],
                     choices={'axial', 'coronal', 'sagittal'}, nargs='+')
+parser.add_argument('-r', '--reverse', action='store_true',
+                    help='Reverse the order of views and names.')
 parser.add_argument('-A', '--use-affine', action='store_true',
                     help='Use affine matrix to transform the image.')
 
@@ -102,7 +104,7 @@ for row in contents:
 
 
 names = [c[0] for c in contents]
-template = Template(read_template(image_only))
+template = Template(read_template(image_only, args.reverse))
 page = template.render(title='segviz', names=names, views=args.views)
 with open(args.output_dir.joinpath('index.html'), 'w') as html:
     html.write(page)
