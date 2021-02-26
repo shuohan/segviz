@@ -1,58 +1,116 @@
 #!/usr/bin/env python3
 
 import argparse
-import numpy as np
-from PIL import Image
 
-desc = 'Create checkboard fusion of two images'
+desc = 'Create checkboard fusion of two images. Their sizes should be the same.'
 parser = argparse.ArgumentParser(description=desc)
-parser.add_argument('-i1', '--image1', help='Image to fuse')
-parser.add_argument('-i2', '--image2', help='Image to fuse')
-parser.add_argument('-m1', '--mode1', help='Mode of image 1', required=False,
-                    default='L', choices=['L', 'RGB', 'RGBA'])
-parser.add_argument('-m2', '--mode2', help='Mode of image 2', required=False,
-                    default='L', choices=['L', 'RGB', 'RGBA'])
-parser.add_argument('-a', '--alpha', help='The alpha of image 2',
+parser.add_argument('-1', '--image1', help='The first image to fuse.')
+parser.add_argument('-2', '--image2', help='The second image to fuse.')
+parser.add_argument('-o', '--output', required=True, help='The output folder.')
+parser.add_argument('-a', '--alpha', help='The alpha of the second image.',
                     required=False, default=0, type=float)
 parser.add_argument('-s', '--patch-size', type=int, default=10, required=False,
-                    help='The size of the patch (width = height)')
-parser.add_argument('-o', '--output-filename', required=False, default='',
-                    help='The filename of the ouput fused image')
+                    help='The size of checkboard patches (width = height).')
+
+help = ('Min cutoff percentage of image 1 intensities. Any intensties less '
+        'than or equal to this value is set to 0. If None, use the minimum '
+        'of the image.')
+parser.add_argument('-m', '--vmin1', type=float, default=None, help=help)
+help = ('Max cutoff percentage of image 1 intensities. Any intensties greater '
+        'than or equal to this value is set to 255. If None, use the maximum'
+        'of the image.')
+parser.add_argument('-M', '--vmax1', type=float, default=None, help=help)
+
+help = ('Min cutoff percentage of image 2 intensities. Any intensties less '
+        'than or equal to this value is set to 0. If None, use the minimum '
+        'of the image.')
+parser.add_argument('-x', '--vmin2', type=float, default=None, help=help)
+help = ('Max cutoff percentage of image 2 intensities. Any intensties greater '
+        'than or equal to this value is set to 255. If None, use the maximum'
+        'of the image.')
+parser.add_argument('-X', '--vmax2', type=float, default=None, help=help)
+
+parser.add_argument('-q', '--quantile', default=False, action='store_true',
+                    help='Use quantiles to automatically scale the image.')
+help = 'Concatenate slices into a single .png file as a row/column.' 
+parser.add_argument('-C', '--concat', action='store_true', help=help)
+parser.add_argument('-R', '--concat-as-row', action='store_true',
+                    help='Show the slices as a row when use -C.')
+parser.add_argument('-n', '--slice-range', type=int, default=None, nargs=2,
+                    help='The slice range to show.')
+parser.add_argument('-v', '--view', choices=['axial', 'coronal', 'sagittal'],
+                    default='axial', help='The view to convert into.')
+parser.add_argument('-A', '--use-affine', action='store_true', help=help)
+parser.add_argument('-t', '--slice-step', default=1, type=int,
+                    help='Show every this number of slices.')
+parser.add_argument('-P', '--padding-color',
+                    type=int, nargs=4, default=[0, 0, 0, 255],
+                    help='The padding color (0..255 RGBA) when use -C.')
+
 args = parser.parse_args()
 
-image1 = Image.open(args.image1).convert('RGBA')
-image2 = Image.open(args.image2).convert('RGBA')
-image1_array = np.array(image1, dtype=np.uint8)
-image2_array = np.array(image2, dtype=np.uint8)
 
-height, width = image1_array.shape[:2]
-left = 0
-top = 0
-alpha_upper = args.alpha
-alpha = args.alpha
-while top < height:
-    hstart = top
-    hend = hstart + args.patch_size
-    while left < width:
-        wstart = left
-        wend = left + args.patch_size
-        image1_array[hstart:hend, wstart:wend, 3] = \
-            image1_array[hstart:hend, wstart:wend, 3] * (1 - alpha)
-        image2_array[hstart:hend, wstart:wend, 3] = \
-            image2_array[hstart:hend, wstart:wend, 3] * alpha
-        left = wend
-        alpha = 1 - alpha
-    top = hend
-    left = 0
-    alpha = 1 - alpha_upper
-    alpha_upper = alpha
+import nibabel as nib
+import numpy as np
+from pathlib import Path
 
-image1 = Image.fromarray(image1_array)
-image2 = Image.fromarray(image2_array)
-composition = image1_array + image2_array
-composition = Image.alpha_composite(image1, image2)
-# composition = Image.fromarray(composition, 'RGBA')
-if args.output_filename:
-    composition.save(args.output_filename)
+from improc3d import transform_to_axial
+from improc3d import transform_to_coronal
+from improc3d import transform_to_sagittal
+from segviz.render import CheckboardRenderer
+from segviz.utils import concat_pils
+
+
+if args.view == 'axial':
+    transform = transform_to_axial
+elif args.view == 'coronal':
+    transform = transform_to_coronal
+elif args.view == 'sagittal':
+    transform = transform_to_sagittal
+coarse = not args.use_affine
+
+image1_obj = nib.load(args.image1)
+image1 = image1_obj.get_fdata(dtype=np.float32)
+image2_obj = nib.load(args.image2)
+image2 = image2_obj.get_fdata(dtype=np.float32)
+
+affine = image1_obj.affine
+if args.use_affine:
+    assert affine == image2_obj.affine
+image1 = transform(image1, affine, order=1, coarse=coarse)
+image2 = transform(image2, affine, order=1, coarse=coarse)
+
+renderer = CheckboardRenderer(image1, image2, patch_size=args.patch_size,
+                              alpha=args.alpha)
+
+if args.quantile:
+    renderer.automatic_rescale()
 else:
-    composition.show()
+    renderer.rescale_intensity(args.vmin1, args.vmax1, args.vmin2, args.vmax2)
+
+num_slices = len(renderer)
+num_digits = len(str(num_slices))
+if args.slice_range is not None:
+    start = max(args.slice_range[0], 0)
+    stop = min(args.slice_range[1], len(renderer))
+    slice_range = range(start, stop, args.slice_step)
+else:
+    slice_range = range(0, num_slices, args.slice_step)
+
+args.output = Path(args.output)
+if args.concat:
+    pics = [[renderer[s_ind]] for s_ind in slice_range]
+    if args.concat_as_row:
+        pics = list(zip(*pics))
+    pic = concat_pils(pics, bg_color=args.padding_color)
+    args.output.parent.mkdir(exist_ok=True, parents=True)
+    filename = args.output.with_suffix('.png')
+    pic.save(filename)
+
+else:
+    print('slice')
+    args.output.mkdir(exist_ok=True, parents=True)
+    for s_ind in slice_range:
+        filename = args.output.joinpath(('%%0%dd.png' % num_digits) % s_ind)
+        pic = renderer[s_ind]
+        pic.save(filename)

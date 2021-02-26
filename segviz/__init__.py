@@ -1,4 +1,5 @@
 from .render import ImageRenderer, ImagePairRenderer, ImageEdgeRenderer
+from .render import CheckboardRenderer
 from .utils import assign_colors, compose_image_and_labels
 from .utils import convert_grayscale_image_to_pil, reindex_colors
 from .utils import append_alpha_column, concat_pils, load_colors

@@ -167,3 +167,72 @@ class ImageEdgeRenderer(ImagePairRenderer):
             erosion = binary_erosion(mask, iterations=self.edge_width)
             label_image[erosion] = 0
         self._colored_label_image = assign_colors(label_image, self.colors)
+
+
+class CheckboardRenderer(ImageRenderer):
+    def __init__(self, image1, image2, patch_size=20, alpha=0):
+        self._renderer1 = ImageRenderer(image1)
+        self._renderer2 = ImageRenderer(image2)
+        assert self._renderer1.slice_size == self._renderer2.slice_size
+        self.patch_size = patch_size
+        self.alpha = alpha
+
+    def automatic_rescale(self):
+        self._renderer1.automatic_rescale()
+        self._renderer2.automatic_rescale()
+
+    @property
+    def slice_size(self):
+        return self._renderer1.slice_size
+
+    @property
+    def intensity_range(self):
+        vmin1, vmax1 = self._renderer1.intensity_range
+        vmin2, vmax2 = self._renderer2.intensity_range
+        return vmin1, vmax1, vmin2, vmax2
+
+    def rescale_intensity(self, vmin1=None, vmax1=None, vmin2=None, vmax2=None):
+        self._renderer1.rescale_intensity(vmin1, vmax1)
+        self._renderer2.rescale_intensity(vmin2, vmax2)
+
+    def __len__(self):
+        return len(self._renderer1)
+
+    def __getitem__(self, ind):
+        image_slice1 = self._renderer1[ind]
+        image_slice2 = self._renderer2[ind]
+        image_slice = self._compose(image_slice1, image_slice2)
+        return image_slice
+
+    def _check_slice_ind(self, ind):
+        assert False
+
+    def _compose(self, image_slice1, image_slice2):
+        array1 = np.array(image_slice1.convert('RGBA'), dtype=np.uint8)
+        array2 = np.array(image_slice2.convert('RGBA'), dtype=np.uint8)
+        height, width = array1.shape[:2]
+        left = 0
+        top = 0
+        alpha_upper = self.alpha
+        alpha = self.alpha
+        while top < height:
+            hstart = top
+            hend = hstart + self.patch_size
+            while left < width:
+                wstart = left
+                wend = left + self.patch_size
+                array1[hstart:hend, wstart:wend, 3] = \
+                    array1[hstart:hend, wstart:wend, 3] * (1 - alpha)
+                array2[hstart:hend, wstart:wend, 3] = \
+                    array2[hstart:hend, wstart:wend, 3] * alpha
+                left = wend
+                alpha = 1 - alpha
+            top = hend
+            left = 0
+            alpha = 1 - alpha_upper
+            alpha_upper = alpha
+
+        image1 = Image.fromarray(array1)
+        image2 = Image.fromarray(array2)
+        composition = Image.alpha_composite(image1, image2)
+        return composition
