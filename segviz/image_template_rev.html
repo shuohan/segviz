@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ title }}</title>
+    </head>
+    <body>
+        {% for view in views %}
+            {% for name in names %}
+                <h3>{{ name }}: {{ view }}</h3>
+                <img src="images/{{ name }}/{{ view }}_image.png">
+            {% endfor %}
+        {% endfor %}
+    </body>
+</html>
