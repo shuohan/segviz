@@ -4,12 +4,12 @@ import numpy as np
 import nibabel as nib
 from pathlib import Path
 
-from segviz.render import CheckboardRenderer
+from segviz.render import CheckerboardRenderer
 from improc3d import transform_to_coronal, transform_to_sagittal
 
 
 def test_render():
-    dirname = Path('results_checkboard_render')
+    dirname = Path('results_checkerboard_render')
     dirname.mkdir(exist_ok=True)
 
     t1_fn = 't1.nii.gz'
@@ -24,7 +24,7 @@ def test_render():
     t1 = transform_to_coronal(t1, affine, coarse=True)
     t2 = transform_to_coronal(t2, affine, coarse=True)
 
-    renderer = CheckboardRenderer(t1, t2, patch_size=40)
+    renderer = CheckerboardRenderer(t1, t2, patch_size=40)
     assert len(renderer) == t1.shape[2]
     im = renderer[140]
     im.save(dirname.joinpath('comp.png'))

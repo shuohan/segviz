@@ -28,6 +28,11 @@ parser.add_argument('-r', '--reverse', action='store_true',
                     help='Reverse the order of views and names.')
 parser.add_argument('-A', '--use-affine', action='store_true',
                     help='Use affine matrix to transform the image.')
+parser.add_argument('-s', '--patch-size', type=int, default=20, required=False,
+                    help='The size of checkerboard patches (width = height).')
+parser.add_argument('-m', '--mode', default='image',
+                    choices={'image', 'checkerboard'})
+
 
 args = parser.parse_args()
 
@@ -49,53 +54,77 @@ with open(args.input_list) as csvfile:
 image_only = len(contents[0]) == 2
 
 print('Generate slices...')
-convert = str(Path(__file__).parent.resolve().joinpath('convert_nii'))
-for row in contents:
-    for view in args.views:
-        if len(row) == 2:
+
+if args.mode == 'image':
+    convert = str(Path(__file__).parent.resolve().joinpath('convert_nii'))
+    for row in contents:
+        for view in args.views:
+            if len(row) == 2:
+                image_fn = '{}_image.png'.format(view)
+                image_fn = args.output_dir.joinpath('images', row[0], image_fn)
+                image_fn = str(image_fn.resolve())
+
+                if not Path(image_fn).exists():
+
+                    image_cmd = [convert, '-i', row[1], '-v', view, '-q', '-S',
+                                 '-C', '-R', '-t', str(args.slice_step),
+                                 '-o', image_fn]
+                    if args.use_affine:
+                        image_cmd.append('-A')
+
+                    print(' '.join(image_cmd))
+                    proc = subprocess.run(image_cmd, capture_output=True)
+
+            elif len(row) == 3:
+                label_fn = '{}_label.png'.format(view)
+                label_fn = args.output_dir.joinpath('images', row[0], label_fn)
+                label_fn = str(label_fn.resolve())
+
+                image_fn = '{}_image.png'.format(view)
+                image_fn = args.output_dir.joinpath('images', row[0], image_fn)
+                image_fn = str(image_fn.resolve())
+
+                if not Path(label_fn).exists() or not Path(image_fn).exists():
+
+                    label_cmd = [convert, '-i', row[1], '-l', row[2], '-v', view,
+                                 '-q', '-a', str(args.alpha), '-S', '-C', '-R',
+                                 '-t', str(args.slice_step), '-o', label_fn, '-s']
+                    if args.use_affine:
+                        label_cmd.append('-A')
+
+                    if args.colormap is not None and Path(args.colormap).exists():
+                        label_cmd.extend(['-c', args.colormap])
+                    else:
+                        label_cmd.append('-r')
+                    print(' '.join(label_cmd))
+                    proc = subprocess.run(label_cmd, capture_output=True)
+                    slice_range = str(proc.stdout, 'utf-8').strip().split()
+
+                    image_cmd = [convert, '-i', row[1], '-v', view, '-q', '-S',
+                                 '-C', '-R', '-t', str(args.slice_step),
+                                 '-o', image_fn, '-n', *slice_range]
+                    if args.use_affine:
+                        image_cmd.append('-A')
+
+                    print(' '.join(image_cmd))
+                    proc = subprocess.run(image_cmd, capture_output=True)
+
+else:
+    convert = str(Path(__file__).parent.resolve().joinpath('create_checkerboard'))
+    for row in contents:
+        for view in args.views:
             image_fn = '{}_image.png'.format(view)
             image_fn = args.output_dir.joinpath('images', row[0], image_fn)
             image_fn = str(image_fn.resolve())
 
             if not Path(image_fn).exists():
 
-                image_cmd = [convert, '-i', row[1], '-v', view, '-q', '-S',
-                             '-C', '-R', '-t', str(args.slice_step),
+                image_cmd = [convert, '-1', row[1], '-2', row[2],
+                             '-v', view, '-q', '-C', '-R',
+                             '-t', str(args.slice_step),
+                             '-a', str(args.alpha),
+                             '-s', str(args.patch_size),
                              '-o', image_fn]
-                if args.use_affine:
-                    image_cmd.append('-A')
-
-                print(' '.join(image_cmd))
-                proc = subprocess.run(image_cmd, capture_output=True)
-
-        elif len(row) == 3:
-            label_fn = '{}_label.png'.format(view)
-            label_fn = args.output_dir.joinpath('images', row[0], label_fn)
-            label_fn = str(label_fn.resolve())
-
-            image_fn = '{}_image.png'.format(view)
-            image_fn = args.output_dir.joinpath('images', row[0], image_fn)
-            image_fn = str(image_fn.resolve())
-
-            if not Path(label_fn).exists() or not Path(image_fn).exists():
-
-                label_cmd = [convert, '-i', row[1], '-l', row[2], '-v', view,
-                             '-q', '-a', str(args.alpha), '-S', '-C', '-R',
-                             '-t', str(args.slice_step), '-o', label_fn, '-s']
-                if args.use_affine:
-                    label_cmd.append('-A')
-
-                if args.colormap is not None and Path(args.colormap).exists():
-                    label_cmd.extend(['-c', args.colormap])
-                else:
-                    label_cmd.append('-r')
-                print(' '.join(label_cmd))
-                proc = subprocess.run(label_cmd, capture_output=True)
-                slice_range = str(proc.stdout, 'utf-8').strip().split()
-
-                image_cmd = [convert, '-i', row[1], '-v', view, '-q', '-S',
-                             '-C', '-R', '-t', str(args.slice_step),
-                             '-o', image_fn, '-n', *slice_range]
                 if args.use_affine:
                     image_cmd.append('-A')
 
@@ -104,7 +133,10 @@ for row in contents:
 
 
 names = [c[0] for c in contents]
-template = Template(read_template(image_only, args.reverse))
+if args.mode == 'image':
+    template = Template(read_template(image_only, args.reverse))
+else:
+    template = Template(read_template(True, args.reverse))
 page = template.render(title='segviz', names=names, views=args.views)
 with open(args.output_dir.joinpath('index.html'), 'w') as html:
     html.write(page)

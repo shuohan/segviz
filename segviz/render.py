@@ -169,7 +169,7 @@ class ImageEdgeRenderer(ImagePairRenderer):
         self._colored_label_image = assign_colors(label_image, self.colors)
 
 
-class CheckboardRenderer(ImageRenderer):
+class CheckerboardRenderer(ImageRenderer):
     def __init__(self, image1, image2, patch_size=20, alpha=0):
         self._renderer1 = ImageRenderer(image1)
         self._renderer2 = ImageRenderer(image2)

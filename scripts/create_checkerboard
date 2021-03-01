@@ -2,7 +2,7 @@
 
 import argparse
 
-desc = 'Create checkboard fusion of two images. Their sizes should be the same.'
+desc = 'Create checkerboard fusion of two images. Their sizes should be the same.'
 parser = argparse.ArgumentParser(description=desc)
 parser.add_argument('-1', '--image1', help='The first image to fuse.')
 parser.add_argument('-2', '--image2', help='The second image to fuse.')
@@ -10,7 +10,7 @@ parser.add_argument('-o', '--output', required=True, help='The output folder.')
 parser.add_argument('-a', '--alpha', help='The alpha of the second image.',
                     required=False, default=0, type=float)
 parser.add_argument('-s', '--patch-size', type=int, default=10, required=False,
-                    help='The size of checkboard patches (width = height).')
+                    help='The size of checkerboard patches (width = height).')
 
 help = ('Min cutoff percentage of image 1 intensities. Any intensties less '
         'than or equal to this value is set to 0. If None, use the minimum '
@@ -57,7 +57,7 @@ from pathlib import Path
 from improc3d import transform_to_axial
 from improc3d import transform_to_coronal
 from improc3d import transform_to_sagittal
-from segviz.render import CheckboardRenderer
+from segviz.render import CheckerboardRenderer
 from segviz.utils import concat_pils
 
 
@@ -80,8 +80,8 @@ if args.use_affine:
 image1 = transform(image1, affine, order=1, coarse=coarse)
 image2 = transform(image2, affine, order=1, coarse=coarse)
 
-renderer = CheckboardRenderer(image1, image2, patch_size=args.patch_size,
-                              alpha=args.alpha)
+renderer = CheckerboardRenderer(image1, image2, patch_size=args.patch_size,
+                                alpha=args.alpha)
 
 if args.quantile:
     renderer.automatic_rescale()
