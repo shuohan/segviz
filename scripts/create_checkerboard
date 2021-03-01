@@ -76,7 +76,7 @@ image2 = image2_obj.get_fdata(dtype=np.float32)
 
 affine = image1_obj.affine
 if args.use_affine:
-    assert affine == image2_obj.affine
+    assert np.allclose(affine, image2_obj.affine)
 image1 = transform(image1, affine, order=1, coarse=coarse)
 image2 = transform(image2, affine, order=1, coarse=coarse)
 

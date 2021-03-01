@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ title }}</title>
+    </head>
+    <body>
+        {% for i in range(names|length) %}
+            {% for view in views %}
+                <h3>{{ names[i] }}: {{ view }}</h3>
+                <img src="images/{{ names[i] }}/{{ view }}_image.png">
+                {% if modes[i] == 'l' %}
+                    <img src="images/{{ names[i] }}/{{ view }}_label.png">
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </body>
+</html>
