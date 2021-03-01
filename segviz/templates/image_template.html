@@ -8,8 +8,10 @@
         {% for i in range(names|length) %}
             {% for view in views %}
                 <h3>{{ names[i] }}: {{ view }}</h3>
-                <img src="images/{{ names[i] }}/{{ view }}_image.png">
-                {% if modes[i] == 'l' %}
+                {% if modes[i] == 'i' or modes[i] == 'c' or modes[i] == 'l' %}
+                    <img src="images/{{ names[i] }}/{{ view }}_image.png">
+                {% endif %}
+                {% if modes[i] == 'l' or modes[i] == 'L' %}
                     <img src="images/{{ names[i] }}/{{ view }}_label.png">
                 {% endif %}
             {% endfor %}
