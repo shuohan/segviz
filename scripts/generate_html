@@ -144,9 +144,17 @@ for row in contents:
             image_fn = str(image_fn.resolve())
             if not Path(image_fn).exists():
                 image_cmd = [command, '-1', row[2], '-2', row[3], '-v', view,
-                             '-q', '-C', '-R', '-t', str(args.slice_step),
+                             '-C', '-R', '-t', str(args.slice_step),
                              '-a', str(args.alpha), '-s', str(args.patch_size),
                              '-o', image_fn]
+                if len(row) == 4:
+                    image_cmd.append('-q')
+                elif len(row) == 6:
+                    image_cmd.extend(['-m', row[4], '-M', row[5],
+                                      '-x', row[4], '-X', row[5]])
+                elif len(row) == 8:
+                    image_cmd.extend(['-m', row[4], '-M', row[5],
+                                      '-x', row[6], '-X', row[7]])
                 if args.use_affine:
                     image_cmd.append('-A')
                 print(' '.join(image_cmd))
