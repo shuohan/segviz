@@ -8,7 +8,7 @@
         {% for i in range(names|length) %}
             {% for view in views %}
                 <h3>{{ names[i] }}: {{ view }}</h3>
-                {% if modes[i] == 'i' or modes[i] == 'c' or modes[i] == 'l' %}
+                {% if modes[i] in ['i', 'c', 'l', 'a'] %}
                     <img src="images/{{ names[i] }}/{{ view }}_image.png">
                 {% endif %}
                 {% if modes[i] == 'l' or modes[i] == 'L' %}
